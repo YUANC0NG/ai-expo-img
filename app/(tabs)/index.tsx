@@ -1,78 +1,156 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
+import { MonthlyAlbum } from '../../src/types/Photo';
+import { PermissionStatus } from '../../src/types/Error';
+import { useAlbumList } from '../../src/hooks/useAlbumList';
+import { useTrash } from '../../src/contexts/TrashContext';
+import AlbumList from '../../src/components/album/AlbumList';
+import AlbumHeader from '../../src/components/album/AlbumHeader';
+import LoadingSpinner from '../../src/components/common/LoadingSpinner';
+import { theme } from '../../src/styles/theme';
+import { commonStyles } from '../../src/styles/common';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { Icon } from '@nutui/nutui-react-native';
+export default function AlbumListScreen() {
+  const {
+    albumGroups,
+    loading,
+    error,
+    permissionStatus,
+    refreshing,
+    refresh,
+    requestPermission,
+  } = useAlbumList();
 
+  const { getTotalCount } = useTrash();
 
-export default function HomeScreen() {
+  const handleAlbumPress = (album: MonthlyAlbum) => {
+    router.push({
+      pathname: '/photo-viewer',
+      params: {
+        year: album.year.toString(),
+        month: album.month.toString(),
+      },
+    });
+  };
+
+  const handleTrashPress = () => {
+    router.push('/trash-bin');
+  };
+
+  const handlePermissionRequest = () => {
+    Alert.alert(
+      '需要照片访问权限',
+      '此应用需要访问您的照片库以便进行照片管理和清理操作。',
+      [
+        { text: '取消', style: 'cancel' },
+        { text: '授权', onPress: requestPermission },
+      ]
+    );
+  };
+
+  // 渲染权限请求界面
+  const renderPermissionRequest = () => (
+    <View style={commonStyles.centerContainer}>
+      <Text style={styles.permissionTitle}>需要照片访问权限</Text>
+      <Text style={styles.permissionMessage}>
+        此应用需要访问您的照片库以便进行照片管理和清理操作。
+      </Text>
+      <Pressable
+        style={[commonStyles.button, commonStyles.primaryButton, styles.permissionButton]}
+        onPress={handlePermissionRequest}
+      >
+        <Text style={[commonStyles.buttonText, commonStyles.primaryButtonText]}>
+          授权访问
+        </Text>
+      </Pressable>
+    </View>
+  );
+
+  // 渲染错误界面
+  const renderError = () => (
+    <View style={commonStyles.errorContainer}>
+      <Text style={commonStyles.errorText}>{error}</Text>
+      <Pressable
+        style={[commonStyles.button, commonStyles.primaryButton]}
+        onPress={refresh}
+      >
+        <Text style={[commonStyles.buttonText, commonStyles.primaryButtonText]}>
+          重试
+        </Text>
+      </Pressable>
+    </View>
+  );
+
+  if (loading) {
+    return (
+      <SafeAreaView style={commonStyles.container}>
+        <AlbumHeader title="照片清理" showTrash={false} />
+        <LoadingSpinner />
+      </SafeAreaView>
+    );
+  }
+
+  if (permissionStatus !== PermissionStatus.GRANTED) {
+    return (
+      <SafeAreaView style={commonStyles.container}>
+        <AlbumHeader title="照片清理" showTrash={false} />
+        {renderPermissionRequest()}
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={commonStyles.container}>
+        <AlbumHeader title="照片清理" showTrash={false} />
+        {renderError()}
+      </SafeAreaView>
+    );
+  }
+
+  const totalPhotos = albumGroups.reduce(
+    (sum, group) => sum + group.months.reduce(
+      (monthSum, month) => monthSum + month.photoCount, 0
+    ), 0
+  );
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <Icon name="dongdong"></Icon>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <SafeAreaView style={commonStyles.container}>
+      <AlbumHeader
+        title="照片清理"
+        subtitle={`${totalPhotos} 张照片`}
+        onTrashPress={handleTrashPress}
+        trashCount={getTotalCount()}
+      />
+      <AlbumList
+        albumGroups={albumGroups}
+        onAlbumPress={handleAlbumPress}
+        refreshing={refreshing}
+        onRefresh={refresh}
+      />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  permissionTitle: {
+    fontSize: theme.typography.fontSize.xl,
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.text,
+    textAlign: 'center',
+    marginBottom: theme.spacing.sm,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  permissionMessage: {
+    fontSize: theme.typography.fontSize.base,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: theme.typography.fontSize.base * theme.typography.lineHeight.relaxed,
+    marginBottom: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.lg,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  permissionButton: {
+    marginTop: theme.spacing.base,
   },
 });
