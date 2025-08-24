@@ -71,7 +71,6 @@ export default function OrganizeScreen() {
       if (parsedPhotos.length > 0) {
         // 转换为 PhotoItem 格式
         photoList = parsedPhotos.map(convertPhotoAssetToPhotoItem);
-        console.log('成功解析照片数据:', photoList.length, '张照片');
         
         // 从第一张照片的时间推断年月作为标题
         if (photoList.length > 0 && photoList[0].creationTime) {
@@ -82,7 +81,6 @@ export default function OrganizeScreen() {
         }
       }
     } catch (error) {
-      console.log('解析照片数据失败:', error);
       // 使用默认照片数据
     }
   }
@@ -98,11 +96,11 @@ export default function OrganizeScreen() {
   }
 
   const handleIndexChange = (index: number) => {
-    console.log('当前索引:', index);
+    // 索引变化处理
   };
 
   const handleReset = () => {
-    console.log('卡片已重置');
+    // 重置处理
   };
 
   // 动态设置导航标题

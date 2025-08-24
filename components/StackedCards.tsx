@@ -449,7 +449,6 @@ export const StackedCards: React.FC<StackedCardsProps> = ({
   };
 
   const visibleCards = cards.slice(currentIndex, currentIndex + 3);
-  console.log('visibleCards',visibleCards)
   const currentPhoto = showEmptyCard ? null : cards[currentIndex];
 
   return (

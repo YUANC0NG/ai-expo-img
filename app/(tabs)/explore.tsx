@@ -20,7 +20,7 @@ export default function ProfileScreen() {
       '解锁更多功能：\n• 无限制整理照片\n• 高级筛选功能\n• 云端同步\n• 优先客服支持',
       [
         { text: '取消', style: 'cancel' },
-        { text: '立即订阅', onPress: () => console.log('跳转到订阅页面') }
+        { text: '立即订阅', onPress: () => {} }
       ]
     );
   };
@@ -31,8 +31,8 @@ export default function ProfileScreen() {
       '请选择反馈方式',
       [
         { text: '取消', style: 'cancel' },
-        { text: '邮件反馈', onPress: () => console.log('打开邮件应用') },
-        { text: '在线反馈', onPress: () => console.log('跳转到反馈页面') }
+        { text: '邮件反馈', onPress: () => {} },
+        { text: '在线反馈', onPress: () => {} }
       ]
     );
   };
@@ -43,17 +43,17 @@ export default function ProfileScreen() {
       '如果您喜欢这个应用，请在App Store给我们评分！',
       [
         { text: '取消', style: 'cancel' },
-        { text: '去评分', onPress: () => console.log('跳转到App Store') }
+        { text: '去评分', onPress: () => {} }
       ]
     );
   };
 
   const handlePrivacy = () => {
-    console.log('查看隐私政策');
+    // 隐私政策页面
   };
 
   const handleTerms = () => {
-    console.log('查看使用条款');
+    // 使用条款页面
   };
 
   const handleAbout = () => {

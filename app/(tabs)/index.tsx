@@ -14,9 +14,7 @@ export default function AlbumScreen() {
   // 加载相册数据
   const loadAlbums = async () => {
     try {
-      console.log('开始加载相册数据...');
       const albumData = await mediaLibraryService.getMonthlyAlbums();
-      console.log('相册数据加载完成:', albumData.length, '个月份');
       setAlbums(albumData);
     } catch (error) {
       console.error('加载相册失败:', error);

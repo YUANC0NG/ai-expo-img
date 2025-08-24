@@ -34,12 +34,10 @@ export default function RootLayout() {
               headerTitleStyle: {
                 fontSize: 18,
                 fontWeight: '600',
-                color: '#333',
               },
               headerBackTitle: '返回',
               headerBackTitleStyle: {
                 fontSize: 16,
-                color: '#007AFF',
               },
             }}
           />
