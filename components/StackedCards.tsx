@@ -227,6 +227,7 @@ export const StackedCards: React.FC<StackedCardsProps> = ({
   const [deletedPhotos, setDeletedPhotos] = useState<PhotoItem[]>([]);
   const [showTrashModal, setShowTrashModal] = useState(false);
   const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set());
+  const [showGridModal, setShowGridModal] = useState(false);
 
   // 当外部数据或初始索引变化时重置组件状态
   useEffect(() => {
@@ -236,6 +237,7 @@ export const StackedCards: React.FC<StackedCardsProps> = ({
     setShowEmptyCard(false);
     setDeletedPhotos([]);
     setSelectedPhotos(new Set());
+    setShowGridModal(false);
   }, [data, initialIndex]);
 
   // 当索引变化时通知外部
@@ -250,6 +252,7 @@ export const StackedCards: React.FC<StackedCardsProps> = ({
     setShowEmptyCard(false);
     setDeletedPhotos([]);
     setSelectedPhotos(new Set());
+    setShowGridModal(false);
     onReset?.();
   };
 
@@ -304,6 +307,17 @@ export const StackedCards: React.FC<StackedCardsProps> = ({
   // 垃圾桶相关功能
   const handleTrashPress = () => {
     setShowTrashModal(true);
+  };
+
+  // 宫格相关功能
+  const handleGridPress = () => {
+    setShowGridModal(true);
+  };
+
+  const handlePhotoNavigation = (index: number) => {
+    setCurrentIndex(index);
+    setShowEmptyCard(false);
+    setShowGridModal(false);
   };
 
   const handlePhotoSelect = (photoId: string) => {
@@ -407,6 +421,11 @@ export const StackedCards: React.FC<StackedCardsProps> = ({
       {/* 标题栏 */}
       {showTopBar && (
         <View style={styles.topBar}>
+          {/* 宫格按钮 */}
+          <TouchableOpacity style={styles.gridButton} onPress={handleGridPress}>
+            <Text style={styles.gridIcon}>⊞</Text>
+          </TouchableOpacity>
+
           <View style={styles.photoInfo}>
             <Text>
               ({showEmptyCard ? `${cards.length}/${cards.length}` : `${currentIndex + 1}/${cards.length}`})
@@ -549,6 +568,57 @@ export const StackedCards: React.FC<StackedCardsProps> = ({
           )}
         </SafeAreaView>
       </Modal>
+
+      {/* 宫格模态框 */}
+      <Modal
+        visible={showGridModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setShowGridModal(false)}>
+              <Text style={styles.modalCloseButton}>取消</Text>
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>所有照片 ({cards.length})</Text>
+            <View style={styles.placeholder} />
+          </View>
+
+          {cards.length === 0 ? (
+            <View style={styles.emptyTrashContainer}>
+              <Text style={styles.emptyTrashText}>暂无照片</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={cards}
+              numColumns={3}
+              keyExtractor={(item, index) => item.id || `${index}-${item.url}`}
+              renderItem={({ item, index }) => {
+                const isCurrentPhoto = index === currentIndex;
+
+                return (
+                  <TouchableOpacity
+                    style={styles.gridItem}
+                    onPress={() => handlePhotoNavigation(index)}
+                  >
+                    <Image source={{ uri: item.url }} style={styles.gridImage} />
+                    {isCurrentPhoto && (
+                      <View style={styles.currentPhotoOverlay}>
+                        <Text style={styles.currentPhotoIndicator}>●</Text>
+                      </View>
+                    )}
+                    <Text style={styles.gridItemTitle} numberOfLines={1}>
+                      {item.title}
+                    </Text>
+                    <Text style={styles.gridItemIndex}>{index + 1}</Text>
+                  </TouchableOpacity>
+                );
+              }}
+              contentContainerStyle={styles.gridContainer}
+            />
+          )}
+        </SafeAreaView>
+      </Modal>
     </View>
   );
 };
@@ -572,6 +642,13 @@ const styles = StyleSheet.create({
   photoInfo: {
     flex: 1,
     alignItems: 'center',
+  },
+  gridButton: {
+    padding: 8,
+  },
+  gridIcon: {
+    fontSize: 24,
+    color: '#007AFF',
   },
   trashButton: {
     position: 'relative',
@@ -774,5 +851,38 @@ const styles = StyleSheet.create({
   },
   disabledText: {
     color: '#999',
+  },
+  placeholder: {
+    width: 40,
+  },
+  currentPhotoOverlay: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    backgroundColor: 'rgba(0, 122, 255, 0.9)',
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  currentPhotoIndicator: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  gridItemIndex: {
+    position: 'absolute',
+    top: 5,
+    left: 5,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 4,
+    minWidth: 16,
+    textAlign: 'center',
   },
 });
