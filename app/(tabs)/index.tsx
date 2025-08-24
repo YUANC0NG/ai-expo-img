@@ -35,6 +35,7 @@ interface CardProps {
   onSwipeRight: () => void;
   onSwipeUp: () => void;
   isTop: boolean;
+  currentIndex: number;
 }
 
 const Card: React.FC<CardProps> = ({
@@ -44,7 +45,8 @@ const Card: React.FC<CardProps> = ({
   onSwipeLeft,
   onSwipeRight,
   onSwipeUp,
-  isTop
+  isTop,
+  currentIndex,
 }) => {
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
@@ -57,7 +59,9 @@ const Card: React.FC<CardProps> = ({
       translateX.value = 0;
       translateY.value = 0;
     }
-  }, [isTop]);
+    scale.value = withSpring(1 - index * 0.05);
+    offsetY.value = withSpring(index * 10);
+  }, [isTop, index]);
 
   const panGesture = Gesture.Pan()
     .enabled(isTop)
@@ -84,11 +88,19 @@ const Card: React.FC<CardProps> = ({
         return;
       }
 
-      // 右滑上一张
+      // 右滑上一张 - 不移动当前卡片，直接触发回调
       if (translationX > 100 || velocityX > 500) {
-        translateX.value = withTiming(screenWidth, { duration: 300 }, () => {
+        if (currentIndex > 0) {
+          // 回弹当前卡片
+          translateX.value = withSpring(0);
+          translateY.value = withSpring(0);
+          // 触发上一张卡片显示
           runOnJS(onSwipeRight)();
-        });
+        } else {
+          // 没有上一张，回弹
+          translateX.value = withSpring(0);
+          translateY.value = withSpring(0);
+        }
         return;
       }
 
@@ -124,13 +136,37 @@ const Card: React.FC<CardProps> = ({
   );
 };
 
+// 从左边滑入的卡片组件
+const SlideInCard: React.FC<{ imageUrl: string; onComplete: () => void }> = ({ imageUrl, onComplete }) => {
+  const translateX = useSharedValue(-screenWidth);
+
+  React.useEffect(() => {
+    translateX.value = withTiming(0, { duration: 300 }, () => {
+      runOnJS(onComplete)();
+    });
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+    zIndex: 100,
+  }));
+
+  return (
+    <Animated.View style={[styles.card, animatedStyle]}>
+      <Image source={{ uri: imageUrl }} style={styles.cardImage} />
+    </Animated.View>
+  );
+};
+
 export default function HomeScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cards, setCards] = useState(list);
+  const [slideInCard, setSlideInCard] = useState<string | null>(null);
 
   const resetCards = () => {
     setCards(list);
     setCurrentIndex(0);
+    setSlideInCard(null);
   };
 
   const handleSwipeLeft = () => {
@@ -141,8 +177,15 @@ export default function HomeScreen() {
 
   const handleSwipeRight = () => {
     if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
+      // 显示从左边滑入的卡片
+      setSlideInCard(cards[currentIndex - 1]);
     }
+  };
+
+  const handleSlideInComplete = () => {
+    // 滑入动画完成后，更新索引并隐藏滑入卡片
+    setCurrentIndex(currentIndex - 1);
+    setSlideInCard(null);
   };
 
   const handleSwipeUp = () => {
@@ -174,9 +217,17 @@ export default function HomeScreen() {
             onSwipeLeft={handleSwipeLeft}
             onSwipeRight={handleSwipeRight}
             onSwipeUp={handleSwipeUp}
-            isTop={index === 0}
+            isTop={index === 0 && !slideInCard}
+            currentIndex={currentIndex}
           />
         ))}
+
+        {slideInCard && (
+          <SlideInCard
+            imageUrl={slideInCard}
+            onComplete={handleSlideInComplete}
+          />
+        )}
       </View>
 
       {cards.length === 0 && (
