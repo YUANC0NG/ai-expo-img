@@ -260,12 +260,24 @@ export default function HomeScreen() {
 
   const handleSwipeUp = () => {
     const newCards = [...cards];
+    const isLastCard = currentIndex === cards.length - 1;
+
     newCards.splice(currentIndex, 1);
     setCards(newCards);
 
-    if (currentIndex >= newCards.length && newCards.length > 0) {
+    if (newCards.length === 0) {
+      // 所有卡片都被删除了，保持原有逻辑
+      return;
+    }
+
+    if (isLastCard) {
+      // 删除的是最后一张卡片，显示空白提示卡片
+      setShowEmptyCard(true);
+    } else if (currentIndex >= newCards.length) {
+      // 删除后当前索引超出范围，跳到新的最后一张
       setCurrentIndex(newCards.length - 1);
     }
+    // 如果删除的不是最后一张，currentIndex 保持不变，自动显示下一张
   };
 
   const visibleCards = cards.slice(currentIndex, currentIndex + 3);
