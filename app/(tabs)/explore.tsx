@@ -1,110 +1,259 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { Collapsible } from '@/components/Collapsible';
-import { ExternalLink } from '@/components/ExternalLink';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
+import React from 'react';
+import { StyleSheet, View, ScrollView, TouchableOpacity, Text, Alert } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 
-export default function TabTwoScreen() {
+interface MenuItem {
+  id: string;
+  title: string;
+  subtitle?: string;
+  icon: string;
+  action: () => void;
+  isPremium?: boolean;
+}
+
+export default function ProfileScreen() {
+  const handleSubscribe = () => {
+    Alert.alert(
+      '升级到专业版',
+      '解锁更多功能：\n• 无限制整理照片\n• 高级筛选功能\n• 云端同步\n• 优先客服支持',
+      [
+        { text: '取消', style: 'cancel' },
+        { text: '立即订阅', onPress: () => console.log('跳转到订阅页面') }
+      ]
+    );
+  };
+
+  const handleFeedback = () => {
+    Alert.alert(
+      '意见反馈',
+      '请选择反馈方式',
+      [
+        { text: '取消', style: 'cancel' },
+        { text: '邮件反馈', onPress: () => console.log('打开邮件应用') },
+        { text: '在线反馈', onPress: () => console.log('跳转到反馈页面') }
+      ]
+    );
+  };
+
+  const handleRateApp = () => {
+    Alert.alert(
+      '给我们评分',
+      '如果您喜欢这个应用，请在App Store给我们评分！',
+      [
+        { text: '取消', style: 'cancel' },
+        { text: '去评分', onPress: () => console.log('跳转到App Store') }
+      ]
+    );
+  };
+
+  const handlePrivacy = () => {
+    console.log('查看隐私政策');
+  };
+
+  const handleTerms = () => {
+    console.log('查看使用条款');
+  };
+
+  const handleAbout = () => {
+    Alert.alert(
+      '关于应用',
+      '照片整理大师 v1.0.0\n\n一款简单易用的照片整理工具，帮助您快速分类和管理照片。',
+      [{ text: '确定' }]
+    );
+  };
+
+  const menuItems: MenuItem[] = [
+    {
+      id: 'subscribe',
+      title: '升级专业版',
+      subtitle: '解锁全部功能',
+      icon: 'crown.fill',
+      action: handleSubscribe,
+      isPremium: true
+    },
+    {
+      id: 'feedback',
+      title: '意见反馈',
+      subtitle: '帮助我们改进',
+      icon: 'message.fill',
+      action: handleFeedback
+    },
+    {
+      id: 'rate',
+      title: '给我们评分',
+      subtitle: '在App Store评分',
+      icon: 'star.fill',
+      action: handleRateApp
+    },
+    {
+      id: 'privacy',
+      title: '隐私政策',
+      icon: 'lock.fill',
+      action: handlePrivacy
+    },
+    {
+      id: 'terms',
+      title: '使用条款',
+      icon: 'doc.text.fill',
+      action: handleTerms
+    },
+    {
+      id: 'about',
+      title: '关于我们',
+      icon: 'info.circle.fill',
+      action: handleAbout
+    }
+  ];
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Explore</ThemedText>
+    <ThemedView style={styles.container}>
+      <ThemedView style={styles.header}>
+        <View style={styles.avatarContainer}>
+          <View style={styles.avatar}>
+            <IconSymbol name="person.fill" size={40} color="#fff" />
+          </View>
+        </View>
+        <ThemedText type="title" style={styles.userName}>用户</ThemedText>
+        <ThemedText style={styles.userStatus}>免费版用户</ThemedText>
       </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image source={require('@/assets/images/react-logo.png')} style={{ alignSelf: 'center' }} />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Custom fonts">
-        <ThemedText>
-          Open <ThemedText type="defaultSemiBold">app/_layout.tsx</ThemedText> to see how to load{' '}
-          <ThemedText style={{ fontFamily: 'SpaceMono' }}>
-            custom fonts such as this one.
-          </ThemedText>
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/versions/latest/sdk/font">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful <ThemedText type="defaultSemiBold">react-native-reanimated</ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <View style={styles.section}>
+          {menuItems.map((item) => (
+            <TouchableOpacity
+              key={item.id}
+              style={[
+                styles.menuItem,
+                item.isPremium && styles.premiumItem
+              ]}
+              onPress={item.action}
+              activeOpacity={0.7}
+            >
+              <View style={styles.menuItemLeft}>
+                <View style={[
+                  styles.iconContainer,
+                  item.isPremium && styles.premiumIconContainer
+                ]}>
+                  <IconSymbol 
+                    name={item.icon} 
+                    size={20} 
+                    color={item.isPremium ? '#fff' : '#666'} 
+                  />
+                </View>
+                <View style={styles.textContainer}>
+                  <Text style={[
+                    styles.menuTitle,
+                    item.isPremium && styles.premiumTitle
+                  ]}>
+                    {item.title}
+                  </Text>
+                  {item.subtitle && (
+                    <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
+                  )}
+                </View>
+              </View>
+              <IconSymbol name="chevron.right" size={16} color="#999" />
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <View style={styles.footer}>
+          <ThemedText style={styles.version}>版本 1.0.0</ThemedText>
+        </View>
+      </ScrollView>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  container: {
+    flex: 1,
   },
-  titleContainer: {
+  header: {
+    alignItems: 'center',
+    paddingTop: 60,
+    paddingBottom: 30,
+    paddingHorizontal: 20,
+  },
+  avatarContainer: {
+    marginBottom: 16,
+  },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#007AFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  userName: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  userStatus: {
+    fontSize: 14,
+    opacity: 0.7,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  section: {
+    paddingHorizontal: 20,
+  },
+  menuItem: {
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 8,
+  },
+  premiumItem: {
+    backgroundColor: '#FFD700',
+  },
+  menuItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  iconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#e9ecef',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  premiumIconContainer: {
+    backgroundColor: '#FF6B35',
+  },
+  textContainer: {
+    flex: 1,
+  },
+  menuTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  premiumTitle: {
+    color: '#8B4513',
+  },
+  menuSubtitle: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  footer: {
+    alignItems: 'center',
+    paddingVertical: 30,
+  },
+  version: {
+    fontSize: 12,
+    opacity: 0.5,
   },
 });
