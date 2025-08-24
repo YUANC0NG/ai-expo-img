@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useLayoutEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { StackedCards, PhotoItem } from '../components/StackedCards';
 import { PhotoAsset } from '../services/MediaLibraryService';
 
 export default function OrganizeScreen() {
-  const { photos } = useLocalSearchParams();
+  const { photos, albumId } = useLocalSearchParams();
+  const navigation = useNavigation();
   
   // 默认照片数据，实际使用时会从相册传入
   const defaultPhotos: PhotoItem[] = [
@@ -60,8 +61,10 @@ export default function OrganizeScreen() {
     return photoItem;
   };
 
-  // 解析传入的照片数据
+  // 解析传入的照片数据和相册信息
   let photoList: PhotoItem[] = defaultPhotos;
+  let albumTitle = '照片整理';
+  
   if (photos && typeof photos === 'string') {
     try {
       const parsedPhotos: PhotoAsset[] = JSON.parse(photos);
@@ -69,10 +72,28 @@ export default function OrganizeScreen() {
         // 转换为 PhotoItem 格式
         photoList = parsedPhotos.map(convertPhotoAssetToPhotoItem);
         console.log('成功解析照片数据:', photoList.length, '张照片');
+        
+        // 从第一张照片的时间推断年月作为标题
+        if (photoList.length > 0 && photoList[0].creationTime) {
+          const date = new Date(photoList[0].creationTime);
+          const year = date.getFullYear();
+          const month = date.getMonth() + 1;
+          albumTitle = `${year}年${month}月`;
+        }
       }
     } catch (error) {
       console.log('解析照片数据失败:', error);
       // 使用默认照片数据
+    }
+  }
+  
+  // 如果有albumId参数，尝试从中解析年月信息
+  if (albumId && typeof albumId === 'string') {
+    const parts = albumId.split('-');
+    if (parts.length >= 2) {
+      const year = parts[0];
+      const month = parts[1];
+      albumTitle = `${year}年${month}月`;
     }
   }
 
@@ -83,6 +104,13 @@ export default function OrganizeScreen() {
   const handleReset = () => {
     console.log('卡片已重置');
   };
+
+  // 动态设置导航标题
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      title: albumTitle,
+    });
+  }, [navigation, albumTitle]);
 
   return (
     <View style={styles.container}>
@@ -101,7 +129,7 @@ export default function OrganizeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 60,
+    backgroundColor: '#f5f5f5',
   },
   stackedCards: {
     flex: 1,

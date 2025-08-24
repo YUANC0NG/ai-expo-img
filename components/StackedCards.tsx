@@ -669,11 +669,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 15,
+    paddingVertical: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
-    marginBottom: 10,
+    marginBottom: 5,
   },
   photoInfo: {
     flex: 1,
