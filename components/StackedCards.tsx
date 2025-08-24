@@ -341,6 +341,11 @@ export const StackedCards: React.FC<StackedCardsProps> = ({
             });
             setDeletedPhotos(newDeletedPhotos);
             setSelectedPhotos(new Set());
+
+            // 如果删除后垃圾桶为空，关闭弹窗
+            if (newDeletedPhotos.length === 0) {
+              setShowTrashModal(false);
+            }
           }
         }
       ]
@@ -359,6 +364,8 @@ export const StackedCards: React.FC<StackedCardsProps> = ({
           onPress: () => {
             setDeletedPhotos([]);
             setSelectedPhotos(new Set());
+            // 关闭垃圾桶弹窗
+            setShowTrashModal(false);
           }
         }
       ]
@@ -377,9 +384,19 @@ export const StackedCards: React.FC<StackedCardsProps> = ({
     });
 
     // 恢复到卡片列表
-    setCards(prev => [...prev, ...photosToRestore]);
+    const newCards = [...cards, ...photosToRestore];
+    setCards(newCards);
     setDeletedPhotos(remainingDeleted);
     setSelectedPhotos(new Set());
+
+    // 如果当前显示空白卡片且恢复了照片，跳转到最后一张有效卡片
+    if (showEmptyCard && photosToRestore.length > 0) {
+      setShowEmptyCard(false);
+      setCurrentIndex(newCards.length - 1);
+    }
+
+    // 关闭垃圾桶弹窗
+    setShowTrashModal(false);
   };
 
   const visibleCards = cards.slice(currentIndex, currentIndex + 3);
