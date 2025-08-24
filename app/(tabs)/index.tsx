@@ -1,87 +1,40 @@
-import React from 'react';
-import { StyleSheet, View, ScrollView, TouchableOpacity, Text, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, ScrollView, TouchableOpacity, Text, ActivityIndicator, RefreshControl } from 'react-native';
 import { router } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-
-interface AlbumMonth {
-  id: string;
-  month: string;
-  year: number;
-  photoCount: number;
-  coverImage: string;
-  photos: {
-    id: string;
-    url: string;
-    time: string;
-    title: string;
-  }[];
-}
-
-// 模拟按月分类的相册数据
-const albumData: AlbumMonth[] = [
-  {
-    id: '2024-08',
-    month: '8月',
-    year: 2024,
-    photoCount: 156,
-    coverImage: 'https://storage.360buyimg.com/jdc-article/NutUItaro34.jpg',
-    photos: [
-      {
-        id: '1',
-        url: 'https://storage.360buyimg.com/jdc-article/NutUItaro34.jpg',
-        time: '2024-08-15 14:30',
-        title: '美丽风景'
-      },
-      {
-        id: '2',
-        url: 'https://storage.360buyimg.com/jdc-article/NutUItaro2.jpg',
-        time: '2024-08-16 09:15',
-        title: '城市夜景'
-      }
-    ]
-  },
-  {
-    id: '2024-07',
-    month: '7月',
-    year: 2024,
-    photoCount: 89,
-    coverImage: 'https://storage.360buyimg.com/jdc-article/NutUItaro2.jpg',
-    photos: [
-      {
-        id: '3',
-        url: 'https://storage.360buyimg.com/jdc-article/welcomenutui.jpg',
-        time: '2024-07-17 16:45',
-        title: '欢迎界面'
-      }
-    ]
-  },
-  {
-    id: '2024-06',
-    month: '6月',
-    year: 2024,
-    photoCount: 234,
-    coverImage: 'https://storage.360buyimg.com/jdc-article/welcomenutui.jpg',
-    photos: [
-      {
-        id: '4',
-        url: 'https://storage.360buyimg.com/jdc-article/fristfabu.jpg',
-        time: '2024-06-18 11:20',
-        title: '首次发布'
-      }
-    ]
-  },
-  {
-    id: '2024-05',
-    month: '5月',
-    year: 2024,
-    photoCount: 67,
-    coverImage: 'https://storage.360buyimg.com/jdc-article/fristfabu.jpg',
-    photos: []
-  }
-];
+import { OptimizedImage } from '@/components/OptimizedImage';
+import { mediaLibraryService, AlbumMonth } from '@/services/MediaLibraryService';
 
 export default function AlbumScreen() {
+  const [albums, setAlbums] = useState<AlbumMonth[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // 加载相册数据
+  const loadAlbums = async () => {
+    try {
+      console.log('开始加载相册数据...');
+      const albumData = await mediaLibraryService.getMonthlyAlbums();
+      console.log('相册数据加载完成:', albumData.length, '个月份');
+      setAlbums(albumData);
+    } catch (error) {
+      console.error('加载相册失败:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 下拉刷新
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadAlbums();
+    setRefreshing(false);
+  };
+
+  useEffect(() => {
+    loadAlbums();
+  }, []);
   const handleAlbumPress = (album: AlbumMonth) => {
     // 导航到整理照片页面，传递该月的照片数据
     router.push({
@@ -93,6 +46,15 @@ export default function AlbumScreen() {
     });
   };
 
+  if (loading) {
+    return (
+      <ThemedView style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <ThemedText style={styles.loadingText}>正在加载相册...</ThemedText>
+      </ThemedView>
+    );
+  }
+
   return (
     <ThemedView style={styles.container}>
       <ThemedView style={styles.header}>
@@ -100,24 +62,37 @@ export default function AlbumScreen() {
         <ThemedText style={styles.subtitle}>按月整理您的照片</ThemedText>
       </ThemedView>
       
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {albumData.map((album) => (
-          <TouchableOpacity
-            key={album.id}
-            style={styles.albumItem}
-            onPress={() => handleAlbumPress(album)}
-            activeOpacity={0.7}
-          >
-            <Image source={{ uri: album.coverImage }} style={styles.coverImage} />
-            <View style={styles.albumInfo}>
-              <Text style={styles.albumTitle}>{album.year}年{album.month}</Text>
-              <Text style={styles.photoCount}>{album.photoCount} 张照片</Text>
-            </View>
-            <View style={styles.arrow}>
-              <Text style={styles.arrowText}>›</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
+      <ScrollView 
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        {albums.length === 0 ? (
+          <View style={styles.emptyState}>
+            <ThemedText style={styles.emptyText}>暂无照片</ThemedText>
+            <ThemedText style={styles.emptySubtext}>请检查相册权限或添加一些照片</ThemedText>
+          </View>
+        ) : (
+          albums.map((album) => (
+            <TouchableOpacity
+              key={album.id}
+              style={styles.albumItem}
+              onPress={() => handleAlbumPress(album)}
+              activeOpacity={0.7}
+            >
+              <OptimizedImage uri={album.coverImage} style={styles.coverImage} />
+              <View style={styles.albumInfo}>
+                <Text style={styles.albumTitle}>{album.year}年{album.month}</Text>
+                <Text style={styles.photoCount}>{album.photoCount} 张照片</Text>
+              </View>
+              <View style={styles.arrow}>
+                <Text style={styles.arrowText}>›</Text>
+              </View>
+            </TouchableOpacity>
+          ))
+        )}
       </ScrollView>
     </ThemedView>
   );
