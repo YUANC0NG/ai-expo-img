@@ -66,8 +66,16 @@ const Card: React.FC<CardProps> = ({
   const panGesture = Gesture.Pan()
     .enabled(isTop)
     .onUpdate((event) => {
-      translateX.value = event.translationX;
-      translateY.value = event.translationY;
+      // 右滑时完全不移动卡片，只有左滑和上滑时才更新位置
+      if (event.translationX < 0) {
+        // 左滑：正常跟随手势
+        translateX.value = event.translationX;
+        translateY.value = event.translationY;
+      } else {
+        // 右滑：卡片完全不动，只更新Y轴（用于上滑删除）
+        translateX.value = 0;
+        translateY.value = event.translationY;
+      }
     })
     .onEnd((event) => {
       const { translationX, translationY, velocityX, velocityY } = event;
@@ -88,18 +96,18 @@ const Card: React.FC<CardProps> = ({
         return;
       }
 
-      // 右滑上一张 - 不移动当前卡片，直接触发回调
+      // 右滑上一张 - 检测右滑手势但不移动当前卡片
       if (translationX > 100 || velocityX > 500) {
         if (currentIndex > 0) {
-          // 回弹当前卡片
-          translateX.value = withSpring(0);
-          translateY.value = withSpring(0);
-          // 触发上一张卡片显示
+          // 确保当前卡片保持在原位
+          translateX.value = 0;
+          translateY.value = 0;
+          // 触发上一张卡片从左边滑入
           runOnJS(onSwipeRight)();
         } else {
-          // 没有上一张，回弹
-          translateX.value = withSpring(0);
-          translateY.value = withSpring(0);
+          // 没有上一张，保持原位
+          translateX.value = 0;
+          translateY.value = 0;
         }
         return;
       }
@@ -110,11 +118,10 @@ const Card: React.FC<CardProps> = ({
     });
 
   const animatedStyle = useAnimatedStyle(() => {
-    const rotate = interpolate(
-      translateX.value,
-      [-200, 0, 200],
-      [-15, 0, 15]
-    );
+    // 只有左滑时才有旋转效果，右滑时完全不旋转
+    const rotate = translateX.value < 0
+      ? interpolate(translateX.value, [-200, 0], [-15, 0])
+      : 0; // 右滑时不旋转
 
     return {
       transform: [
