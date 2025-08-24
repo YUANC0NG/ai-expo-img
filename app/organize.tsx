@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { StackedCards, PhotoItem } from '../components/StackedCards';
+import { PhotoAsset } from '../services/MediaLibraryService';
 
 export default function OrganizeScreen() {
   const { photos } = useLocalSearchParams();
@@ -34,16 +35,52 @@ export default function OrganizeScreen() {
     },
   ];
 
+  // 转换真实照片数据格式
+  const convertPhotoAssetToPhotoItem = (asset: PhotoAsset): PhotoItem => {
+    const date = new Date(asset.creationTime);
+    const photoItem: PhotoItem = {
+      id: asset.id || `photo-${Date.now()}-${Math.random()}`, // 确保有唯一 ID
+      uri: asset.uri,
+      filename: asset.filename,
+      time: date.toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      }),
+      title: asset.filename || '未命名照片',
+      creationTime: asset.creationTime,
+      modificationTime: asset.modificationTime,
+      mediaType: asset.mediaType,
+      width: asset.width,
+      height: asset.height,
+    };
+    
+    // 调试信息
+    console.log('转换照片数据:', {
+      originalId: asset.id,
+      newId: photoItem.id,
+      hasUri: !!photoItem.uri,
+      filename: photoItem.filename,
+    });
+    
+    return photoItem;
+  };
+
   // 解析传入的照片数据
-  let photoList = defaultPhotos;
+  let photoList: PhotoItem[] = defaultPhotos;
   if (photos && typeof photos === 'string') {
     try {
-      const parsedPhotos = JSON.parse(photos);
+      const parsedPhotos: PhotoAsset[] = JSON.parse(photos);
       if (parsedPhotos.length > 0) {
-        photoList = parsedPhotos;
+        // 转换为 PhotoItem 格式
+        photoList = parsedPhotos.map(convertPhotoAssetToPhotoItem);
+        console.log('成功解析照片数据:', photoList.length, '张照片');
       }
     } catch (error) {
       console.log('解析照片数据失败:', error);
+      // 使用默认照片数据
     }
   }
 

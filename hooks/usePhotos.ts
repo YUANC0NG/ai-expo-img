@@ -145,8 +145,8 @@ export const useMonthlyAlbums = () => {
     refetch: fetchAlbums,
   };
 };
-// 高级照片 h
-ook，支持分页和搜索
+
+// 高级照片 hook，支持分页和搜索
 interface UseAdvancedPhotosOptions {
   pageSize?: number;
   searchQuery?: string;

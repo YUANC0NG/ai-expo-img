@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
-  Image,
   Dimensions,
   Text,
   TouchableOpacity,
@@ -19,16 +18,24 @@ import Animated, {
   runOnJS,
   interpolate
 } from 'react-native-reanimated';
+import { OptimizedImage } from './OptimizedImage';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const CARD_WIDTH = screenWidth * 0.85;
 const CARD_HEIGHT = screenHeight * 0.6;
 
 export interface PhotoItem {
-  url: string;
+  id: string;
+  uri?: string; // 真实照片的 URI
+  url?: string; // 网络图片的 URL，保持向后兼容
+  filename?: string;
   time: string;
   title: string;
-  id?: string; // 添加唯一标识
+  creationTime?: number;
+  modificationTime?: number;
+  mediaType?: string;
+  width?: number;
+  height?: number;
 }
 
 interface CardProps {
@@ -58,6 +65,7 @@ const Card: React.FC<CardProps> = ({
   const offsetY = useSharedValue(index * 10);
 
   React.useEffect(() => {
+    // 重置动画状态
     if (!isTop) {
       translateX.value = 0;
       translateY.value = 0;
@@ -65,6 +73,12 @@ const Card: React.FC<CardProps> = ({
     scale.value = withTiming(1 - index * 0.05, { duration: 150 });
     offsetY.value = withTiming(index * 10, { duration: 150 });
   }, [isTop, index]);
+
+  // 当照片变化时重置动画状态
+  React.useEffect(() => {
+    translateX.value = 0;
+    translateY.value = 0;
+  }, [photo.id]);
 
   const panGesture = Gesture.Pan()
     .enabled(isTop)
@@ -80,32 +94,40 @@ const Card: React.FC<CardProps> = ({
     .onEnd((event) => {
       const { translationX, translationY, velocityX, velocityY } = event;
 
+      // 上滑删除
       if (translationY < -80 || velocityY < -400) {
-        translateY.value = withTiming(-screenHeight, { duration: 200 }, () => {
-          runOnJS(onSwipeUp)();
+        translateY.value = withTiming(-screenHeight, { duration: 200 }, (finished) => {
+          if (finished) {
+            runOnJS(onSwipeUp)();
+          }
         });
         return;
       }
 
+      // 左滑下一张
       if (translationX < -100 || velocityX < -500) {
-        translateX.value = withTiming(-screenWidth, { duration: 250 }, () => {
-          runOnJS(onSwipeLeft)();
+        translateX.value = withTiming(-screenWidth, { duration: 250 }, (finished) => {
+          if (finished) {
+            runOnJS(onSwipeLeft)();
+          }
         });
         return;
       }
 
+      // 右滑上一张
       if (translationX > 100 || velocityX > 500) {
         if (currentIndex > 0) {
-          translateX.value = 0;
-          translateY.value = 0;
+          translateX.value = withTiming(0, { duration: 200 });
+          translateY.value = withTiming(0, { duration: 200 });
           runOnJS(onSwipeRight)();
         } else {
-          translateX.value = 0;
-          translateY.value = 0;
+          translateX.value = withTiming(0, { duration: 200 });
+          translateY.value = withTiming(0, { duration: 200 });
         }
         return;
       }
 
+      // 回弹
       translateX.value = withTiming(0, { duration: 200 });
       translateY.value = withTiming(0, { duration: 200 });
     });
@@ -130,10 +152,13 @@ const Card: React.FC<CardProps> = ({
     };
   });
 
+  // 获取图片 URI，优先使用 uri，然后是 url
+  const imageUri = photo.uri || photo.url || '';
+
   return (
     <GestureDetector gesture={panGesture}>
       <Animated.View style={[styles.card, animatedStyle]}>
-        <Image source={{ uri: photo.url }} style={styles.cardImage} />
+        <OptimizedImage uri={imageUri} style={styles.cardImage} contentFit="cover" />
       </Animated.View>
     </GestureDetector>
   );
@@ -153,9 +178,11 @@ const SlideInCard: React.FC<{ photo: PhotoItem; onComplete: () => void }> = ({ p
     zIndex: 100,
   }));
 
+  const imageUri = photo.uri || photo.url || '';
+
   return (
     <Animated.View style={[styles.card, animatedStyle]}>
-      <Image source={{ uri: photo.url }} style={styles.cardImage} />
+      <OptimizedImage uri={imageUri} style={styles.cardImage} contentFit="cover" />
     </Animated.View>
   );
 };
@@ -293,15 +320,23 @@ export const StackedCards: React.FC<StackedCardsProps> = ({
     newCards.splice(currentIndex, 1);
     setCards(newCards);
 
+    // 重置滑入卡片状态
+    setSlideInCard(null);
+
     if (newCards.length === 0) {
+      // 所有卡片都被删除
+      setShowEmptyCard(false);
       return;
     }
 
     if (isLastCard) {
+      // 如果删除的是最后一张卡片，显示空卡片
       setShowEmptyCard(true);
     } else if (currentIndex >= newCards.length) {
+      // 如果当前索引超出范围，调整到最后一张
       setCurrentIndex(newCards.length - 1);
     }
+    // 如果删除的不是最后一张，保持当前索引不变，会自动显示下一张
   };
 
   // 垃圾桶相关功能
@@ -334,7 +369,7 @@ export const StackedCards: React.FC<StackedCardsProps> = ({
     if (selectedPhotos.size === deletedPhotos.length) {
       setSelectedPhotos(new Set());
     } else {
-      const allIds = new Set(deletedPhotos.map((photo, index) => photo.id || `${index}-${photo.url}`));
+      const allIds = new Set(deletedPhotos.map((photo, index) => photo.id || `${index}-${photo.uri || photo.url}`));
       setSelectedPhotos(allIds);
     }
   };
@@ -350,7 +385,7 @@ export const StackedCards: React.FC<StackedCardsProps> = ({
           style: 'destructive',
           onPress: () => {
             const newDeletedPhotos = deletedPhotos.filter((photo, index) => {
-              const photoId = photo.id || `${index}-${photo.url}`;
+              const photoId = photo.id || `${index}-${photo.uri || photo.url}`;
               return !selectedPhotos.has(photoId);
             });
             setDeletedPhotos(newDeletedPhotos);
@@ -388,12 +423,12 @@ export const StackedCards: React.FC<StackedCardsProps> = ({
 
   const handleRestore = () => {
     const photosToRestore = deletedPhotos.filter((photo, index) => {
-      const photoId = photo.id || `${index}-${photo.url}`;
+      const photoId = photo.id || `${index}-${photo.uri || photo.url}`;
       return selectedPhotos.has(photoId);
     });
 
     const remainingDeleted = deletedPhotos.filter((photo, index) => {
-      const photoId = photo.id || `${index}-${photo.url}`;
+      const photoId = photo.id || `${index}-${photo.uri || photo.url}`;
       return !selectedPhotos.has(photoId);
     });
 
@@ -415,6 +450,28 @@ export const StackedCards: React.FC<StackedCardsProps> = ({
 
   const visibleCards = cards.slice(currentIndex, currentIndex + 3);
   const currentPhoto = showEmptyCard ? null : cards[currentIndex];
+
+  // 调试信息
+  React.useEffect(() => {
+    console.log('StackedCards 状态:', {
+      totalCards: cards.length,
+      currentIndex,
+      visibleCardsCount: visibleCards.length,
+      showEmptyCard,
+      deletedPhotosCount: deletedPhotos.length,
+    });
+    
+    // 检查前几张照片的数据
+    cards.slice(0, 5).forEach((photo, index) => {
+      console.log(`照片 ${index}:`, {
+        id: photo.id,
+        hasUri: !!photo.uri,
+        hasUrl: !!photo.url,
+        title: photo.title,
+        uri: photo.uri?.substring(0, 50) + '...',
+      });
+    });
+  }, [cards, currentIndex, visibleCards.length, showEmptyCard, deletedPhotos.length]);
 
   return (
     <View style={[styles.container, style]}>
@@ -448,7 +505,7 @@ export const StackedCards: React.FC<StackedCardsProps> = ({
       <View style={styles.cardContainer}>
         {!showEmptyCard && visibleCards.map((photo, index) => (
           <Card
-            key={`${currentIndex + index}-${photo.url}`}
+            key={`${currentIndex + index}-${photo.id}`}
             photo={photo}
             index={index}
             totalCards={visibleCards.length}
@@ -509,9 +566,9 @@ export const StackedCards: React.FC<StackedCardsProps> = ({
               <FlatList
                 data={deletedPhotos}
                 numColumns={3}
-                keyExtractor={(item, index) => item.id || `${index}-${item.url}`}
+                keyExtractor={(item, index) => item.id || `${index}-${item.uri || item.url}`}
                 renderItem={({ item, index }) => {
-                  const photoId = item.id || `${index}-${item.url}`;
+                  const photoId = item.id || `${index}-${item.uri || item.url}`;
                   const isSelected = selectedPhotos.has(photoId);
 
                   return (
@@ -519,7 +576,7 @@ export const StackedCards: React.FC<StackedCardsProps> = ({
                       style={styles.gridItem}
                       onPress={() => handlePhotoSelect(photoId)}
                     >
-                      <Image source={{ uri: item.url }} style={styles.gridImage} />
+                      <OptimizedImage uri={item.uri || item.url || ''} style={styles.gridImage} contentFit="cover" />
                       <View style={[styles.selectOverlay, isSelected && styles.selectedOverlay]}>
                         {isSelected && <Text style={styles.checkmark}>✓</Text>}
                       </View>
@@ -592,7 +649,7 @@ export const StackedCards: React.FC<StackedCardsProps> = ({
             <FlatList
               data={cards}
               numColumns={3}
-              keyExtractor={(item, index) => item.id || `${index}-${item.url}`}
+              keyExtractor={(item, index) => item.id || `${index}-${item.uri || item.url}`}
               renderItem={({ item, index }) => {
                 const isCurrentPhoto = index === currentIndex;
 
@@ -601,7 +658,7 @@ export const StackedCards: React.FC<StackedCardsProps> = ({
                     style={styles.gridItem}
                     onPress={() => handlePhotoNavigation(index)}
                   >
-                    <Image source={{ uri: item.url }} style={styles.gridImage} />
+                    <OptimizedImage uri={item.uri || item.url || ''} style={styles.gridImage} contentFit="cover" />
                     {isCurrentPhoto && (
                       <View style={styles.currentPhotoOverlay}>
                         <Text style={styles.currentPhotoIndicator}>●</Text>
