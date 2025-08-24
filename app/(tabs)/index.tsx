@@ -10,25 +10,46 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
   withTiming,
   runOnJS,
   interpolate
 } from 'react-native-reanimated';
 
 const list = [
-  'https://storage.360buyimg.com/jdc-article/NutUItaro34.jpg',
-  'https://storage.360buyimg.com/jdc-article/NutUItaro2.jpg',
-  'https://storage.360buyimg.com/jdc-article/welcomenutui.jpg',
-  'https://storage.360buyimg.com/jdc-article/fristfabu.jpg',
+  {
+    url: 'https://storage.360buyimg.com/jdc-article/NutUItaro34.jpg',
+    time: '2024-01-15 14:30',
+    title: '美丽风景'
+  },
+  {
+    url: 'https://storage.360buyimg.com/jdc-article/NutUItaro2.jpg',
+    time: '2024-01-16 09:15',
+    title: '城市夜景'
+  },
+  {
+    url: 'https://storage.360buyimg.com/jdc-article/welcomenutui.jpg',
+    time: '2024-01-17 16:45',
+    title: '欢迎界面'
+  },
+  {
+    url: 'https://storage.360buyimg.com/jdc-article/fristfabu.jpg',
+    time: '2024-01-18 11:20',
+    title: '首次发布'
+  },
 ];
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const CARD_WIDTH = screenWidth * 0.85;
 const CARD_HEIGHT = screenHeight * 0.6;
 
+interface PhotoItem {
+  url: string;
+  time: string;
+  title: string;
+}
+
 interface CardProps {
-  imageUrl: string;
+  photo: PhotoItem;
   index: number;
   totalCards: number;
   onSwipeLeft: () => void;
@@ -39,7 +60,7 @@ interface CardProps {
 }
 
 const Card: React.FC<CardProps> = ({
-  imageUrl,
+  photo,
   index,
   totalCards,
   onSwipeLeft,
@@ -144,14 +165,14 @@ const Card: React.FC<CardProps> = ({
   return (
     <GestureDetector gesture={panGesture}>
       <Animated.View style={[styles.card, animatedStyle]}>
-        <Image source={{ uri: imageUrl }} style={styles.cardImage} />
+        <Image source={{ uri: photo.url }} style={styles.cardImage} />
       </Animated.View>
     </GestureDetector>
   );
 };
 
 // 从左边滑入的卡片组件
-const SlideInCard: React.FC<{ imageUrl: string; onComplete: () => void }> = ({ imageUrl, onComplete }) => {
+const SlideInCard: React.FC<{ photo: PhotoItem; onComplete: () => void }> = ({ photo, onComplete }) => {
   const translateX = useSharedValue(-screenWidth);
 
   React.useEffect(() => {
@@ -167,7 +188,7 @@ const SlideInCard: React.FC<{ imageUrl: string; onComplete: () => void }> = ({ i
 
   return (
     <Animated.View style={[styles.card, animatedStyle]}>
-      <Image source={{ uri: imageUrl }} style={styles.cardImage} />
+      <Image source={{ uri: photo.url }} style={styles.cardImage} />
     </Animated.View>
   );
 };
@@ -224,8 +245,9 @@ const EmptyCard: React.FC<{ onSwipeRight: () => void }> = ({ onSwipeRight }) => 
 export default function HomeScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cards, setCards] = useState(list);
-  const [slideInCard, setSlideInCard] = useState<string | null>(null);
+  const [slideInCard, setSlideInCard] = useState<PhotoItem | null>(null);
   const [showEmptyCard, setShowEmptyCard] = useState(false);
+  const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | 'up' | null>(null);
 
   const resetCards = () => {
     setCards(list);
@@ -235,6 +257,9 @@ export default function HomeScreen() {
   };
 
   const handleSwipeLeft = () => {
+    setSwipeDirection('left');
+    setTimeout(() => setSwipeDirection(null), 1000);
+
     if (currentIndex < cards.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else if (currentIndex === cards.length - 1) {
@@ -244,6 +269,9 @@ export default function HomeScreen() {
   };
 
   const handleSwipeRight = () => {
+    setSwipeDirection('right');
+    setTimeout(() => setSwipeDirection(null), 1000);
+
     if (showEmptyCard) {
       // 从空卡片返回到最后一张 - 显示从左边滑入的卡片
       setSlideInCard(cards[cards.length - 1]);
@@ -266,6 +294,9 @@ export default function HomeScreen() {
   };
 
   const handleSwipeUp = () => {
+    setSwipeDirection('up');
+    setTimeout(() => setSwipeDirection(null), 1000);
+
     const newCards = [...cards];
     const isLastCard = currentIndex === cards.length - 1;
 
@@ -288,21 +319,25 @@ export default function HomeScreen() {
   };
 
   const visibleCards = cards.slice(currentIndex, currentIndex + 3);
+  const currentPhoto = showEmptyCard ? null : cards[currentIndex];
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>
-        堆叠卡片 ({cards.length}张) {showEmptyCard ? '- 已滑完' : ''}
-      </Text>
-      <Text style={styles.instruction}>
-        ← 左滑下一张 | 右滑上一张 → | ↑ 上滑删除
-      </Text>
+      {/* 顶部信息栏 */}
+      <View style={styles.topBar}>
+        <View style={styles.photoInfo}>
+          <Text>
+            ({showEmptyCard ? `${cards.length}/${cards.length}` : `${currentIndex + 1}/${cards.length}`})
+            <Text>{currentPhoto?.time}</Text>
+          </Text>
+        </View>
+      </View>
 
       <View style={styles.cardContainer}>
-        {!showEmptyCard && visibleCards.map((imageUrl, index) => (
+        {!showEmptyCard && visibleCards.map((photo, index) => (
           <Card
-            key={`${currentIndex + index}-${imageUrl}`}
-            imageUrl={imageUrl}
+            key={`${currentIndex + index}-${photo.url}`}
+            photo={photo}
             index={index}
             totalCards={visibleCards.length}
             onSwipeLeft={handleSwipeLeft}
@@ -319,7 +354,7 @@ export default function HomeScreen() {
 
         {slideInCard && (
           <SlideInCard
-            imageUrl={slideInCard}
+            photo={slideInCard}
             onComplete={handleSlideInComplete}
           />
         )}
@@ -343,12 +378,49 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
     paddingTop: 60,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
+  topBar: {
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
     marginBottom: 10,
+  },
+  photoInfo: {
+    alignItems: 'center',
+  },
+  photoCounter: {
+    fontSize: 18,
+    fontWeight: 'bold',
     color: '#333',
+    marginBottom: 5,
+  },
+  photoDetails: {
+    alignItems: 'center',
+  },
+  photoTime: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 2,
+  },
+  photoTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+  },
+  swipeIndicator: {
+    position: 'absolute',
+    top: 15,
+    right: 20,
+    backgroundColor: 'rgba(0, 122, 255, 0.9)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 15,
+  },
+  swipeText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
   },
   instruction: {
     fontSize: 14,
