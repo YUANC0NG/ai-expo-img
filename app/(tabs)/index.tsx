@@ -4,21 +4,25 @@ import { StackedCards, PhotoItem } from '../../components/StackedCards';
 
 const list: PhotoItem[] = [
   {
+    id: '1',
     url: 'https://storage.360buyimg.com/jdc-article/NutUItaro34.jpg',
     time: '2024-01-15 14:30',
     title: '美丽风景'
   },
   {
+    id: '2',
     url: 'https://storage.360buyimg.com/jdc-article/NutUItaro2.jpg',
     time: '2024-01-16 09:15',
     title: '城市夜景'
   },
   {
+    id: '3',
     url: 'https://storage.360buyimg.com/jdc-article/welcomenutui.jpg',
     time: '2024-01-17 16:45',
     title: '欢迎界面'
   },
   {
+    id: '4',
     url: 'https://storage.360buyimg.com/jdc-article/fristfabu.jpg',
     time: '2024-01-18 11:20',
     title: '首次发布'
@@ -26,8 +30,6 @@ const list: PhotoItem[] = [
 ];
 
 export default function HomeScreen() {
-  const [currentIndex, setCurrentIndex] = useState(0); // 设置默认索引为2
-
   const handleIndexChange = (index: number) => {
     console.log('当前索引:', index);
   };
@@ -40,7 +42,7 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <StackedCards 
         data={list}
-        initialIndex={currentIndex}
+        initialIndex={0}
         onIndexChange={handleIndexChange}
         onReset={handleReset}
         showTopBar={true}
