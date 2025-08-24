@@ -59,8 +59,9 @@ const Card: React.FC<CardProps> = ({
       translateX.value = 0;
       translateY.value = 0;
     }
-    scale.value = withSpring(1 - index * 0.05);
-    offsetY.value = withSpring(index * 10);
+    // 使用更快的动画来减少卡顿
+    scale.value = withTiming(1 - index * 0.05, { duration: 150 });
+    offsetY.value = withTiming(index * 10, { duration: 150 });
   }, [isTop, index]);
 
   const panGesture = Gesture.Pan()
@@ -80,9 +81,10 @@ const Card: React.FC<CardProps> = ({
     .onEnd((event) => {
       const { translationX, translationY, velocityX, velocityY } = event;
 
-      // 上滑删除
-      if (translationY < -100 || velocityY < -500) {
-        translateY.value = withTiming(-screenHeight, { duration: 300 }, () => {
+      // 上滑删除 - 优化动画时长和响应性
+      if (translationY < -80 || velocityY < -400) {
+        // 缩短动画时长，提高响应速度
+        translateY.value = withTiming(-screenHeight, { duration: 200 }, () => {
           runOnJS(onSwipeUp)();
         });
         return;
@@ -90,7 +92,7 @@ const Card: React.FC<CardProps> = ({
 
       // 左滑下一张
       if (translationX < -100 || velocityX < -500) {
-        translateX.value = withTiming(-screenWidth, { duration: 300 }, () => {
+        translateX.value = withTiming(-screenWidth, { duration: 250 }, () => {
           runOnJS(onSwipeLeft)();
         });
         return;
@@ -112,9 +114,9 @@ const Card: React.FC<CardProps> = ({
         return;
       }
 
-      // 回弹
-      translateX.value = withSpring(0);
-      translateY.value = withSpring(0);
+      // 回弹 - 使用更快的动画
+      translateX.value = withTiming(0, { duration: 200 });
+      translateY.value = withTiming(0, { duration: 200 });
     });
 
   const animatedStyle = useAnimatedStyle(() => {
@@ -123,12 +125,17 @@ const Card: React.FC<CardProps> = ({
       ? interpolate(translateX.value, [-200, 0], [-15, 0])
       : 0; // 右滑时不旋转
 
+    // 上滑时添加轻微的缩放效果，但不要过度
+    const swipeUpScale = translateY.value < 0
+      ? interpolate(translateY.value, [-100, 0], [0.95, 1], 'clamp')
+      : 1;
+
     return {
       transform: [
         { translateX: translateX.value },
         { translateY: translateY.value + offsetY.value },
         { rotate: `${rotate}deg` },
-        { scale: scale.value },
+        { scale: scale.value * swipeUpScale },
       ],
       zIndex: totalCards - index,
     };
@@ -148,7 +155,7 @@ const SlideInCard: React.FC<{ imageUrl: string; onComplete: () => void }> = ({ i
   const translateX = useSharedValue(-screenWidth);
 
   React.useEffect(() => {
-    translateX.value = withTiming(0, { duration: 300 }, () => {
+    translateX.value = withTiming(0, { duration: 250 }, () => {
       runOnJS(onComplete)();
     });
   }, []);
