@@ -449,29 +449,8 @@ export const StackedCards: React.FC<StackedCardsProps> = ({
   };
 
   const visibleCards = cards.slice(currentIndex, currentIndex + 3);
+  console.log('visibleCards',visibleCards)
   const currentPhoto = showEmptyCard ? null : cards[currentIndex];
-
-  // 调试信息
-  React.useEffect(() => {
-    console.log('StackedCards 状态:', {
-      totalCards: cards.length,
-      currentIndex,
-      visibleCardsCount: visibleCards.length,
-      showEmptyCard,
-      deletedPhotosCount: deletedPhotos.length,
-    });
-
-    // 检查前几张照片的数据
-    cards.slice(0, 5).forEach((photo, index) => {
-      console.log(`照片 ${index}:`, {
-        id: photo.id,
-        hasUri: !!photo.uri,
-        hasUrl: !!photo.url,
-        title: photo.title,
-        uri: photo.uri?.substring(0, 50) + '...',
-      });
-    });
-  }, [cards, currentIndex, visibleCards.length, showEmptyCard, deletedPhotos.length]);
 
   return (
     <View style={[styles.container, style]}>

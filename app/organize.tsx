@@ -56,15 +56,7 @@ export default function OrganizeScreen() {
       width: asset.width,
       height: asset.height,
     };
-    
-    // 调试信息
-    console.log('转换照片数据:', {
-      originalId: asset.id,
-      newId: photoItem.id,
-      hasUri: !!photoItem.uri,
-      filename: photoItem.filename,
-    });
-    
+
     return photoItem;
   };
 
