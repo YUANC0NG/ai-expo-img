@@ -165,25 +165,82 @@ const SlideInCard: React.FC<{ imageUrl: string; onComplete: () => void }> = ({ i
   );
 };
 
+// 空卡片组件
+const EmptyCard: React.FC<{ onSwipeRight: () => void }> = ({ onSwipeRight }) => {
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+
+  const panGesture = Gesture.Pan()
+    .onUpdate((event) => {
+      // 右滑时卡片保持不动，只检测手势
+      translateX.value = 0;
+      translateY.value = 0;
+    })
+    .onEnd((event) => {
+      const { translationX, velocityX } = event;
+
+      // 右滑返回上一张 - 卡片保持不动，触发上一张卡片从左边滑入
+      if (translationX > 100 || velocityX > 500) {
+        // 空卡片保持在原位
+        translateX.value = 0;
+        translateY.value = 0;
+        // 触发上一张卡片从左边滑入
+        runOnJS(onSwipeRight)();
+        return;
+      }
+
+      // 保持原位
+      translateX.value = 0;
+      translateY.value = 0;
+    });
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: translateX.value },
+      { translateY: translateY.value },
+    ],
+    zIndex: 100,
+  }));
+
+  return (
+    <GestureDetector gesture={panGesture}>
+      <Animated.View style={[styles.card, styles.emptyCard, animatedStyle]}>
+        <View style={styles.emptyCardContent}>
+          <Text style={styles.emptyCardTitle}>🎉 已经滑完了！</Text>
+          <Text style={styles.emptyCardSubtitle}>向右滑动返回上一张</Text>
+        </View>
+      </Animated.View>
+    </GestureDetector>
+  );
+};
+
 export default function HomeScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cards, setCards] = useState(list);
   const [slideInCard, setSlideInCard] = useState<string | null>(null);
+  const [showEmptyCard, setShowEmptyCard] = useState(false);
 
   const resetCards = () => {
     setCards(list);
     setCurrentIndex(0);
     setSlideInCard(null);
+    setShowEmptyCard(false);
   };
 
   const handleSwipeLeft = () => {
     if (currentIndex < cards.length - 1) {
       setCurrentIndex(currentIndex + 1);
+    } else if (currentIndex === cards.length - 1) {
+      // 滑到最后一张时显示空卡片
+      setShowEmptyCard(true);
     }
   };
 
   const handleSwipeRight = () => {
-    if (currentIndex > 0) {
+    if (showEmptyCard) {
+      // 从空卡片返回到最后一张 - 显示从左边滑入的卡片
+      setSlideInCard(cards[cards.length - 1]);
+    } else if (currentIndex > 0) {
       // 显示从左边滑入的卡片
       setSlideInCard(cards[currentIndex - 1]);
     }
@@ -191,7 +248,13 @@ export default function HomeScreen() {
 
   const handleSlideInComplete = () => {
     // 滑入动画完成后，更新索引并隐藏滑入卡片
-    setCurrentIndex(currentIndex - 1);
+    if (showEmptyCard) {
+      // 从空卡片返回到最后一张
+      setShowEmptyCard(false);
+      setCurrentIndex(cards.length - 1);
+    } else {
+      setCurrentIndex(currentIndex - 1);
+    }
     setSlideInCard(null);
   };
 
@@ -209,13 +272,15 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>堆叠卡片 ({cards.length}张)</Text>
+      <Text style={styles.title}>
+        堆叠卡片 ({cards.length}张) {showEmptyCard ? '- 已滑完' : ''}
+      </Text>
       <Text style={styles.instruction}>
         ← 左滑下一张 | 右滑上一张 → | ↑ 上滑删除
       </Text>
 
       <View style={styles.cardContainer}>
-        {visibleCards.map((imageUrl, index) => (
+        {!showEmptyCard && visibleCards.map((imageUrl, index) => (
           <Card
             key={`${currentIndex + index}-${imageUrl}`}
             imageUrl={imageUrl}
@@ -228,6 +293,10 @@ export default function HomeScreen() {
             currentIndex={currentIndex}
           />
         ))}
+
+        {showEmptyCard && (
+          <EmptyCard onSwipeRight={handleSwipeRight} />
+        )}
 
         {slideInCard && (
           <SlideInCard
@@ -312,6 +381,30 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#007AFF',
     borderRadius: 8,
+    textAlign: 'center',
+  },
+  emptyCard: {
+    backgroundColor: '#f8f9fa',
+    borderWidth: 2,
+    borderColor: '#e9ecef',
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyCardContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyCardTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#495057',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  emptyCardSubtitle: {
+    fontSize: 16,
+    color: '#6c757d',
     textAlign: 'center',
   },
 });
