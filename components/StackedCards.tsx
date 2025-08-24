@@ -460,7 +460,7 @@ export const StackedCards: React.FC<StackedCardsProps> = ({
       showEmptyCard,
       deletedPhotosCount: deletedPhotos.length,
     });
-    
+
     // 检查前几张照片的数据
     cards.slice(0, 5).forEach((photo, index) => {
       console.log(`照片 ${index}:`, {
@@ -843,10 +843,11 @@ const styles = StyleSheet.create({
     flex: 1,
     margin: 5,
     maxWidth: (screenWidth - 40) / 3,
+    minWidth: (screenWidth - 40) / 3 - 10,
   },
   gridImage: {
     width: '100%',
-    aspectRatio: 1,
+    height: 120,
     borderRadius: 8,
   },
   selectOverlay: {
