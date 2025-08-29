@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "app-expo-temp",
-    "slug": "app-expo-temp",
+    "name": "supabase-expo-template",
+    "slug": "supabase-expo-template",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "appexpotemp",
+    "scheme": "supabaseexpotemp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -37,6 +37,10 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "supabaseUrl": "YOUR_SUPABASE_URL",
+      "supabaseAnonKey": "YOUR_SUPABASE_ANON_KEY"
     }
   }
 }
