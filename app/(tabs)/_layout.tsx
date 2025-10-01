@@ -27,13 +27,6 @@ export default function TabLayout() {
         }),
       }}>
       <Tabs.Screen
-        name="index"
-        options={{
-          title: '相册',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="photo.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
         name="habits"
         options={{
           title: '习惯',
