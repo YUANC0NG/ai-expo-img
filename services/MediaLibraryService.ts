@@ -126,6 +126,46 @@ class MediaLibraryService {
         const photos = await this.getAllPhotos();
         return this.groupPhotosByMonth(photos);
     }
+
+    // 删除照片
+    async deletePhotos(photoIds: string[]): Promise<boolean> {
+        if (!this.hasPermission) {
+            const granted = await this.requestPermissions();
+            if (!granted) return false;
+        }
+
+        try {
+            if (photoIds.length === 0) {
+                return true;
+            }
+
+            // 获取照片资源
+            const assets = await MediaLibrary.getAssetsAsync({
+                mediaType: 'photo',
+                first: photoIds.length,
+                id: photoIds
+            });
+
+            if (assets.assets.length === 0) {
+                console.warn('未找到要删除的照片');
+                return false;
+            }
+
+            // 删除照片
+            await MediaLibrary.deleteAssetsAsync(assets.assets);
+            console.log(`成功删除 ${assets.assets.length} 张照片`);
+            return true;
+        } catch (error) {
+            console.error('删除照片失败:', error);
+            Alert.alert('删除失败', '无法删除照片，请检查权限或重试');
+            return false;
+        }
+    }
+
+    // 删除单张照片
+    async deletePhoto(photoId: string): Promise<boolean> {
+        return this.deletePhotos([photoId]);
+    }
 }
 
 export const mediaLibraryService = new MediaLibraryService();

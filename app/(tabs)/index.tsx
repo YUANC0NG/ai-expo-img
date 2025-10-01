@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, View, ScrollView, TouchableOpacity, Text, ActivityIndicator, RefreshControl } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { OptimizedImage } from '@/components/OptimizedImage';
@@ -33,6 +33,13 @@ export default function AlbumScreen() {
   useEffect(() => {
     loadAlbums();
   }, []);
+
+  // 当页面获得焦点时刷新数据（从整理页面返回时）
+  useFocusEffect(
+    useCallback(() => {
+      loadAlbums();
+    }, [])
+  );
   const handleAlbumPress = (album: AlbumMonth) => {
     // 导航到整理照片页面，传递该月的照片数据
     router.push({

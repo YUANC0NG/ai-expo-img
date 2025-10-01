@@ -10,6 +10,7 @@ import {
   SafeAreaView,
   Alert
 } from 'react-native';
+import { mediaLibraryService } from '../services/MediaLibraryService';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
@@ -369,7 +370,7 @@ export const StackedCards: React.FC<StackedCardsProps> = ({
     if (selectedPhotos.size === deletedPhotos.length) {
       setSelectedPhotos(new Set());
     } else {
-      const allIds = new Set(deletedPhotos.map((photo, index) => photo.id || `${index}-${photo.uri || photo.url}`));
+      const allIds = new Set(deletedPhotos.map(photo => photo.id || photo.uri || photo.url));
       setSelectedPhotos(allIds);
     }
   };
@@ -377,17 +378,42 @@ export const StackedCards: React.FC<StackedCardsProps> = ({
   const handleConfirmDelete = () => {
     Alert.alert(
       '确认删除',
-      `确定要永久删除选中的 ${selectedPhotos.size} 张图片吗？`,
+      `确定要永久删除选中的 ${selectedPhotos.size} 张图片吗？此操作无法撤销。`,
       [
         { text: '取消', style: 'cancel' },
         {
           text: '删除',
           style: 'destructive',
-          onPress: () => {
-            const newDeletedPhotos = deletedPhotos.filter((photo, index) => {
-              const photoId = photo.id || `${index}-${photo.uri || photo.url}`;
+          onPress: async () => {
+            // 从deletedPhotos中查找选中的真实照片ID
+            const photosToDelete = deletedPhotos.filter(photo => {
+              const photoId = photo.id || photo.uri || photo.url;
+              return selectedPhotos.has(photoId);
+            });
+
+            // 提取真实的照片ID（排除占位符和网络图片）
+            const realPhotoIds = photosToDelete
+              .filter(photo => {
+                const id = photo.id || photo.uri || photo.url;
+                return id && !id.startsWith('photo-') && !id.includes('-http');
+              })
+              .map(photo => photo.id) as string[];
+
+            // 调用实际的删除API
+            if (realPhotoIds.length > 0) {
+              const success = await mediaLibraryService.deletePhotos(realPhotoIds);
+              if (!success) {
+                Alert.alert('删除失败', '部分照片删除失败，请重试');
+                return;
+              }
+            }
+
+            // 更新UI状态：移除所有选中的照片
+            const newDeletedPhotos = deletedPhotos.filter(photo => {
+              const photoId = photo.id || photo.uri || photo.url;
               return !selectedPhotos.has(photoId);
             });
+            
             setDeletedPhotos(newDeletedPhotos);
             setSelectedPhotos(new Set());
 
@@ -404,13 +430,30 @@ export const StackedCards: React.FC<StackedCardsProps> = ({
   const handleDeleteAll = () => {
     Alert.alert(
       '确认删除全部',
-      `确定要永久删除全部 ${deletedPhotos.length} 张图片吗？`,
+      `确定要永久删除全部 ${deletedPhotos.length} 张图片吗？此操作无法撤销。`,
       [
         { text: '取消', style: 'cancel' },
         {
           text: '删除全部',
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
+            // 获取所有真实照片ID（排除占位符和网络图片）
+            const realPhotoIds = deletedPhotos
+              .filter(photo => {
+                const id = photo.id || photo.uri || photo.url;
+                return id && !id.startsWith('photo-') && !id.includes('-http');
+              })
+              .map(photo => photo.id) as string[];
+
+            // 调用实际的删除API
+            if (realPhotoIds.length > 0) {
+              const success = await mediaLibraryService.deletePhotos(realPhotoIds);
+              if (!success) {
+                Alert.alert('删除失败', '部分照片删除失败，请重试');
+                return;
+              }
+            }
+
             setDeletedPhotos([]);
             setSelectedPhotos(new Set());
             // 关闭垃圾桶弹窗
@@ -422,13 +465,13 @@ export const StackedCards: React.FC<StackedCardsProps> = ({
   };
 
   const handleRestore = () => {
-    const photosToRestore = deletedPhotos.filter((photo, index) => {
-      const photoId = photo.id || `${index}-${photo.uri || photo.url}`;
+    const photosToRestore = deletedPhotos.filter(photo => {
+      const photoId = photo.id || photo.uri || photo.url;
       return selectedPhotos.has(photoId);
     });
 
-    const remainingDeleted = deletedPhotos.filter((photo, index) => {
-      const photoId = photo.id || `${index}-${photo.uri || photo.url}`;
+    const remainingDeleted = deletedPhotos.filter(photo => {
+      const photoId = photo.id || photo.uri || photo.url;
       return !selectedPhotos.has(photoId);
     });
 
@@ -544,9 +587,9 @@ export const StackedCards: React.FC<StackedCardsProps> = ({
               <FlatList
                 data={deletedPhotos}
                 numColumns={3}
-                keyExtractor={(item, index) => item.id || `${index}-${item.uri || item.url}`}
+                keyExtractor={(item) => item.id || item.uri || item.url || ''}
                 renderItem={({ item, index }) => {
-                  const photoId = item.id || `${index}-${item.uri || item.url}`;
+                  const photoId = item.id || item.uri || item.url || '';
                   const isSelected = selectedPhotos.has(photoId);
 
                   return (
@@ -627,7 +670,7 @@ export const StackedCards: React.FC<StackedCardsProps> = ({
             <FlatList
               data={cards}
               numColumns={3}
-              keyExtractor={(item, index) => item.id || `${index}-${item.uri || item.url}`}
+              keyExtractor={(item) => item.id || item.uri || item.url}
               renderItem={({ item, index }) => {
                 const isCurrentPhoto = index === currentIndex;
 
