@@ -113,7 +113,6 @@ export default function HabitsScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <ThemedView style={styles.header}>
-        <ThemedText style={styles.title}>我的习惯</ThemedText>
       </ThemedView>
 
       {/* 分类筛选 */}
@@ -289,17 +288,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    paddingVertical: 8,
   },
   backButton: {
     padding: 4,
