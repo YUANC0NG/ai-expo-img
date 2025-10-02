@@ -698,7 +698,7 @@ const styles = StyleSheet.create({
   },
   habitsList: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 10,
   },
   habitCard: {
     flexDirection: 'row',
