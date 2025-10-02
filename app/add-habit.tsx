@@ -58,6 +58,13 @@ export default function AddHabitScreen() {
 
     setSaving(true);
     try {
+      console.log('Saving habit with data:', {
+        name: name.trim(),
+        description: description.trim(),
+        color: '#4ECDC4',
+        category: finalCategory,
+      });
+      
       const newHabit = await HabitsService.saveHabit({
         name: name.trim(),
         description: description.trim(),
@@ -66,6 +73,10 @@ export default function AddHabitScreen() {
       });
       
       console.log('New habit created:', newHabit);
+      
+      // 验证保存是否成功
+      const savedHabits = await HabitsService.getHabits();
+      console.log('All habits after save:', savedHabits);
       
       Alert.alert('成功', '习惯创建成功', [
         { text: '确定', onPress: () => {

@@ -359,7 +359,7 @@ export default function HabitsScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <ThemedView style={styles.header}>
-        <ThemedText style={styles.title}>习惯打卡</ThemedText>
+        <ThemedText style={styles.title}></ThemedText>
       </ThemedView>
 
       {/* 分类筛选 */}
@@ -393,7 +393,6 @@ export default function HabitsScreen() {
       
       {/* 今日习惯 */}
       <View style={styles.todayHabitsContainer}>
-        <ThemedText style={styles.sectionTitle}>今日习惯</ThemedText>
         <ScrollView 
           style={styles.habitsList}
           refreshControl={
