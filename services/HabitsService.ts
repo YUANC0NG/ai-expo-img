@@ -116,7 +116,7 @@ class HabitsService {
       }
 
       const newCheckIn: CheckIn = {
-        id: Date.now().toString(),
+        id: `${habitId}-${date}-${Date.now()}`,
         habitId,
         date,
         createdAt: new Date(),
@@ -268,8 +268,14 @@ class HabitsService {
           },
         ];
 
-        for (const habit of sampleHabits) {
-          await this.saveHabit(habit);
+        // 确保每个习惯有唯一的ID
+        for (let i = 0; i < sampleHabits.length; i++) {
+          const habitWithId = {
+            ...sampleHabits[i],
+            id: `sample-habit-${i}`,
+            createdAt: new Date(),
+          };
+          await AsyncStorage.setItem(HABITS_STORAGE_KEY, JSON.stringify([habitWithId]));
         }
       }
     } catch (error) {

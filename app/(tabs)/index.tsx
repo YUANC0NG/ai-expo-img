@@ -33,6 +33,9 @@ export default function HabitsScreen() {
 
   const colors = Colors[colorScheme ?? 'light'];
 
+  // 获取今天的日期字符串，避免在渲染过程中重复计算
+  const todayString = new Date().toISOString().split('T')[0];
+
   // 加载数据
   const loadData = async () => {
     try {
@@ -134,20 +137,17 @@ export default function HabitsScreen() {
   // 处理今日打卡（切换打卡状态）
   const handleTodayCheckIn = async (habit: Habit) => {
     try {
-      const today = new Date().toISOString().split('T')[0];
-      const existingCheckIn = checkIns.find(c => c.habitId === habit.id && c.date === today);
+      const existingCheckIn = checkIns.find(c => c.habitId === habit.id && c.date === todayString);
       
       if (existingCheckIn) {
         // 取消打卡
-        await HabitsService.removeCheckIn(habit.id, today);
-        setCheckIns(prev => prev.filter(c => c.id !== existingCheckIn.id));
+        await HabitsService.removeCheckIn(habit.id, todayString);
+        setCheckIns(prev => prev.filter(c => !(c.habitId === habit.id && c.date === todayString)));
       } else {
         // 新增打卡
-        const newCheckIn = await HabitsService.addCheckIn(habit.id, today);
+        const newCheckIn = await HabitsService.addCheckIn(habit.id, todayString);
         setCheckIns(prev => [...prev, newCheckIn]);
       }
-      
-      loadData(); // 刷新数据
     } catch (error) {
       console.error('Error toggling check-in:', error);
       Alert.alert('错误', '操作失败，请重试');
@@ -159,7 +159,9 @@ export default function HabitsScreen() {
   const handleDeleteHabit = async (habit: Habit) => {
     try {
       await HabitsService.deleteHabit(habit.id);
-      loadData(); // 刷新数据
+      // 更新本地状态 - 移除已删除的习惯和相关的打卡记录
+      setHabits(prev => prev.filter(h => h.id !== habit.id));
+      setCheckIns(prev => prev.filter(c => c.habitId !== habit.id));
     } catch (error) {
       console.error('Error deleting habit:', error);
       Alert.alert('错误', '删除习惯失败，请重试');
@@ -268,7 +270,7 @@ export default function HabitsScreen() {
   // 渲染习惯卡片内容
   const renderHabitCardContent = (habit: Habit, colors: any) => {
     const todayCheckIn = checkIns.find(c => 
-      c.habitId === habit.id && c.date === new Date().toISOString().split('T')[0]
+      c.habitId === habit.id && c.date === todayString
     );
     const completionRate = calculateHabitCompletionRate(habit);
 
@@ -276,13 +278,15 @@ export default function HabitsScreen() {
       <>
         <View style={styles.habitCardLeft}>
           <View style={[styles.progressCircle, { borderColor: habit.color }]}>
-            <View style={[styles.progressFill, { 
-              backgroundColor: habit.color,
-              width: `${completionRate}%` 
-            }]} />
-            <ThemedText style={[styles.progressText, { color: habit.color }]}>
-              {completionRate}%
-            </ThemedText>
+            <IconSymbol 
+              name={
+                completionRate <= 25 ? "circle" :
+                completionRate <= 50 ? "circle.lefthalf.filled" :
+                completionRate <= 75 ? "circle.righthalf.filled" : "checkmark.circle.fill"
+              }
+              size={24}
+              color={habit.color}
+            />
           </View>
           <View style={styles.habitInfo}>
             <View style={styles.habitTitleRow}>

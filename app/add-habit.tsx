@@ -64,24 +64,26 @@ export default function AddHabitScreen() {
         color: '#4ECDC4',
         category: finalCategory,
       });
-      
+
       const newHabit = await HabitsService.saveHabit({
         name: name.trim(),
         description: description.trim(),
         color: '#4ECDC4', // 使用默认颜色
         category: finalCategory,
       });
-      
+
       console.log('New habit created:', newHabit);
-      
+
       // 验证保存是否成功
       const savedHabits = await HabitsService.getHabits();
       console.log('All habits after save:', savedHabits);
-      
+
       Alert.alert('成功', '习惯创建成功', [
-        { text: '确定', onPress: () => {
-          router.back();
-        }}
+        {
+          text: '确定', onPress: () => {
+            router.back();
+          }
+        }
       ]);
     } catch (error) {
       console.error('Error saving habit:', error);
@@ -92,14 +94,14 @@ export default function AddHabitScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background, padding: 10 }]}>
       <ThemedView style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <IconSymbol name="chevron.left" size={24} color={colors.text} />
         </TouchableOpacity>
         <ThemedText style={styles.title}>新建习惯</ThemedText>
-        <TouchableOpacity 
-          onPress={handleSave} 
+        <TouchableOpacity
+          onPress={handleSave}
           style={[styles.saveButton, { opacity: saving ? 0.6 : 1 }]}
           disabled={saving}
         >
@@ -113,7 +115,7 @@ export default function AddHabitScreen() {
         <ThemedView style={styles.section}>
           <ThemedText style={styles.sectionTitle}>习惯名称</ThemedText>
           <TextInput
-            style={[styles.input, { 
+            style={[styles.input, {
               backgroundColor: colors.background,
               borderColor: colors.border || '#E0E0E0',
               color: colors.text,
@@ -129,7 +131,7 @@ export default function AddHabitScreen() {
         <ThemedView style={styles.section}>
           <ThemedText style={styles.sectionTitle}>描述（可选）</ThemedText>
           <TextInput
-            style={[styles.input, styles.textArea, { 
+            style={[styles.input, styles.textArea, {
               backgroundColor: colors.background,
               borderColor: colors.border || '#E0E0E0',
               color: colors.text,
@@ -146,7 +148,7 @@ export default function AddHabitScreen() {
 
         <ThemedView style={styles.section}>
           <ThemedText style={styles.sectionTitle}>选择分类</ThemedText>
-          
+
           {/* 已有分类 */}
           <View style={styles.categoryGrid}>
             {[...new Set([...DEFAULT_CATEGORIES, ...existingCategories.filter(cat => cat && cat.trim())])].map((cat) => (
@@ -172,7 +174,7 @@ export default function AddHabitScreen() {
                 </TouchableOpacity>
               )
             ))}
-            
+
             {/* 自定义分类按钮 */}
             <TouchableOpacity
               style={[
@@ -200,7 +202,7 @@ export default function AddHabitScreen() {
           {/* 自定义分类输入 */}
           {showCustomCategory && (
             <TextInput
-              style={[styles.input, styles.customCategoryInput, { 
+              style={[styles.input, styles.customCategoryInput, {
                 backgroundColor: colors.background,
                 borderColor: colors.border || '#E0E0E0',
                 color: colors.text,
@@ -279,6 +281,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     marginBottom: 8,
+    maxWidth: '100%',
+    width: 'auto',
+    alignSelf: 'flex-start',
   },
   customCategoryOption: {
     flexDirection: 'row',
@@ -291,6 +296,7 @@ const styles = StyleSheet.create({
   categoryOptionText: {
     fontSize: 14,
     fontWeight: '500',
+    maxWidth: '100%',
   },
   customCategoryText: {
     fontSize: 14,
