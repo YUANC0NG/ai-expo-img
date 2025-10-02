@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,8 @@ import {
   Alert,
   SafeAreaView,
   RefreshControl,
+  Animated,
+  PanResponder,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ThemedView } from '@/components/ThemedView';
@@ -129,15 +131,16 @@ export default function HabitsScreen() {
     return Math.round(completionRate);
   };
 
-  // 处理今日打卡
+  // 处理今日打卡（切换打卡状态）
   const handleTodayCheckIn = async (habit: Habit) => {
     try {
       const today = new Date().toISOString().split('T')[0];
       const existingCheckIn = checkIns.find(c => c.habitId === habit.id && c.date === today);
       
       if (existingCheckIn) {
-        // 如果已经打卡，不做任何操作
-        return;
+        // 取消打卡
+        await HabitsService.removeCheckIn(habit.id, today);
+        setCheckIns(prev => prev.filter(c => c.id !== existingCheckIn.id));
       } else {
         // 新增打卡
         const newCheckIn = await HabitsService.addCheckIn(habit.id, today);
@@ -149,6 +152,177 @@ export default function HabitsScreen() {
       console.error('Error toggling check-in:', error);
       Alert.alert('错误', '操作失败，请重试');
     }
+  };
+
+  
+  // 处理删除习惯
+  const handleDeleteHabit = async (habit: Habit) => {
+    try {
+      await HabitsService.deleteHabit(habit.id);
+      loadData(); // 刷新数据
+    } catch (error) {
+      console.error('Error deleting habit:', error);
+      Alert.alert('错误', '删除习惯失败，请重试');
+    }
+  };
+
+  // 可滑动的习惯卡片组件
+  const SwipeableHabitCard = ({ habit, colors, onPress }: { 
+    habit: Habit; 
+    colors: any; 
+    onPress: () => void;
+  }) => {
+    const translateX = useRef(new Animated.Value(0)).current;
+    const [isSwiped, setIsSwiped] = useState(false);
+
+    const panResponder = useRef(
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: (_, gesture) => {
+          return Math.abs(gesture.dx) > Math.abs(gesture.dy);
+        },
+        onPanResponderMove: (_, gesture) => {
+          if (gesture.dx < 0) { // 只允许向左滑动
+            translateX.setValue(gesture.dx);
+            if (gesture.dx < -80) {
+              setIsSwiped(true);
+            } else {
+              setIsSwiped(false);
+            }
+          }
+        },
+        onPanResponderRelease: (_, gesture) => {
+          if (gesture.dx < -80) {
+            // 滑动超过阈值，显示删除确认
+            Alert.alert(
+              '删除习惯',
+              `确定要删除习惯"${habit.name}"吗？\n\n删除后所有相关打卡记录也将被清除。`,
+              [
+                {
+                  text: '取消',
+                  style: 'cancel',
+                  onPress: () => {
+                    setIsSwiped(false);
+                    Animated.spring(translateX, {
+                      toValue: 0,
+                      useNativeDriver: true,
+                    }).start();
+                  },
+                },
+                {
+                  text: '删除',
+                  style: 'destructive',
+                  onPress: () => handleDeleteHabit(habit),
+                },
+              ],
+              { cancelable: true }
+            );
+          } else {
+            // 滑回原位
+            Animated.spring(translateX, {
+              toValue: 0,
+              useNativeDriver: true,
+            }).start();
+          }
+        },
+      })
+    ).current;
+
+    return (
+      <Animated.View
+        style={[
+          styles.swipeableContainer,
+          {
+            transform: [{ translateX }],
+          },
+        ]}
+      >
+        <Animated.View
+          style={[
+            styles.deleteButton,
+            {
+              opacity: translateX.interpolate({
+                inputRange: [-80, -50, 0],
+                outputRange: [1, 0, 0],
+                extrapolate: 'clamp',
+              }),
+            },
+          ]}
+        >
+          <IconSymbol name="trash" size={20} color="white" />
+          <Text style={styles.deleteButtonText}>删除</Text>
+        </Animated.View>
+        
+        <TouchableOpacity
+          style={[styles.habitCard, { backgroundColor: colors.card }]}
+          onPress={onPress}
+          activeOpacity={1}
+          {...panResponder.panHandlers}
+        >
+          {renderHabitCardContent(habit, colors)}
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  };
+
+  // 渲染习惯卡片内容
+  const renderHabitCardContent = (habit: Habit, colors: any) => {
+    const todayCheckIn = checkIns.find(c => 
+      c.habitId === habit.id && c.date === new Date().toISOString().split('T')[0]
+    );
+    const completionRate = calculateHabitCompletionRate(habit);
+
+    return (
+      <>
+        <View style={styles.habitCardLeft}>
+          <View style={[styles.progressCircle, { borderColor: habit.color }]}>
+            <View style={[styles.progressFill, { 
+              backgroundColor: habit.color,
+              width: `${completionRate}%` 
+            }]} />
+            <ThemedText style={[styles.progressText, { color: habit.color }]}>
+              {completionRate}%
+            </ThemedText>
+          </View>
+          <View style={styles.habitInfo}>
+            <View style={styles.habitTitleRow}>
+              <ThemedText style={styles.habitName}>{habit.name}</ThemedText>
+              <View style={[styles.categoryTag, { backgroundColor: colors.tint + '20' }]}>
+                <ThemedText style={[styles.categoryTagText, { color: colors.tint }]}>
+                  {habit.category}
+                </ThemedText>
+              </View>
+            </View>
+            <ThemedText style={styles.habitDescription}>{habit.description}</ThemedText>
+          </View>
+        </View>
+        <View style={styles.habitCardRight}>
+          {todayCheckIn ? (
+            <TouchableOpacity 
+              style={[styles.checkedButton, { backgroundColor: habit.color + '20' }]}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleTodayCheckIn(habit);
+              }}
+            >
+              <IconSymbol name="checkmark" size={16} color={habit.color} />
+              <ThemedText style={[styles.checkedText, { color: habit.color }]}>已打卡</ThemedText>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity 
+              style={[styles.checkButton, { backgroundColor: habit.color }]}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleTodayCheckIn(habit);
+              }}
+            >
+              <IconSymbol name="plus" size={16} color="white" />
+              <ThemedText style={styles.checkButtonText}>打卡</ThemedText>
+            </TouchableOpacity>
+          )}
+        </View>
+      </>
+    );
   };
 
   if (selectedHabit) {
@@ -163,7 +337,11 @@ export default function HabitsScreen() {
               c => c.habitId === selectedHabit.id && c.date === date
             );
             
-            if (!existingCheckIn) {
+            if (existingCheckIn) {
+              // 取消打卡
+              await HabitsService.removeCheckIn(selectedHabit.id, date);
+              setCheckIns(prev => prev.filter(c => c.id !== existingCheckIn.id));
+            } else {
               // 新增打卡
               const newCheckIn = await HabitsService.addCheckIn(selectedHabit.id, date);
               setCheckIns(prev => [...prev, newCheckIn]);
@@ -232,62 +410,14 @@ export default function HabitsScreen() {
               <ThemedText style={styles.emptySubText}>点击右上角的 + 号创建第一个习惯</ThemedText>
             </View>
           ) : (
-            filteredHabits.map((habit) => {
-              const todayCheckIn = checkIns.find(c => 
-                c.habitId === habit.id && c.date === new Date().toISOString().split('T')[0]
-              );
-              const completionRate = calculateHabitCompletionRate(habit);
-              
-              return (
-                <TouchableOpacity
-                  key={habit.id}
-                  style={[styles.habitCard, { backgroundColor: colors.card }]}
-                  onPress={() => handleHabitPress(habit)}
-                >
-                  <View style={styles.habitCardLeft}>
-                    <View style={[styles.progressCircle, { borderColor: habit.color }]}>
-                      <View style={[styles.progressFill, { 
-                        backgroundColor: habit.color,
-                        width: `${completionRate}%` 
-                      }]} />
-                      <ThemedText style={[styles.progressText, { color: habit.color }]}>
-                        {completionRate}%
-                      </ThemedText>
-                    </View>
-                    <View style={styles.habitInfo}>
-                      <View style={styles.habitTitleRow}>
-                        <ThemedText style={styles.habitName}>{habit.name}</ThemedText>
-                        <View style={[styles.categoryTag, { backgroundColor: colors.tint + '20' }]}>
-                          <ThemedText style={[styles.categoryTagText, { color: colors.tint }]}>
-                            {habit.category}
-                          </ThemedText>
-                        </View>
-                      </View>
-                      <ThemedText style={styles.habitDescription}>{habit.description}</ThemedText>
-                    </View>
-                  </View>
-                  <View style={styles.habitCardRight}>
-                    {todayCheckIn ? (
-                      <View style={[styles.checkedButton, { backgroundColor: habit.color + '20' }]}>
-                        <IconSymbol name="checkmark" size={16} color={habit.color} />
-                        <ThemedText style={[styles.checkedText, { color: habit.color }]}>已打卡</ThemedText>
-                      </View>
-                    ) : (
-                      <TouchableOpacity 
-                        style={[styles.checkButton, { backgroundColor: habit.color }]}
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          handleTodayCheckIn(habit);
-                        }}
-                      >
-                        <IconSymbol name="plus" size={16} color="white" />
-                        <ThemedText style={styles.checkButtonText}>打卡</ThemedText>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </TouchableOpacity>
-              );
-            })
+            filteredHabits.map((habit) => (
+            <SwipeableHabitCard
+              key={habit.id}
+              habit={habit}
+              colors={colors}
+              onPress={() => handleHabitPress(habit)}
+            />
+          ))
           )}
         </ScrollView>
       </View>
@@ -319,30 +449,26 @@ function HabitDetailScreen({ habit, checkIns, onBack, onToggleCheckIn, colors }:
   
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <ThemedView style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
+      <ThemedView style={styles.detailHeader}>
+        <TouchableOpacity 
+          onPress={onBack} 
+          style={styles.detailBackButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
           <IconSymbol name="chevron.left" size={24} color={colors.text} />
         </TouchableOpacity>
         <View style={styles.detailTitleContainer}>
-          <ThemedText style={styles.title}>{habit.name}</ThemedText>
+          <ThemedText style={styles.detailTitle}>{habit.name}</ThemedText>
           <View style={[styles.detailCategoryTag, { backgroundColor: colors.tint + '20' }]}>
             <ThemedText style={[styles.detailCategoryText, { color: colors.tint }]}>
               {habit.category}
             </ThemedText>
           </View>
         </View>
-        <View style={styles.placeholder} />
+        <View style={styles.detailHeaderSpace} />
       </ThemedView>
 
       <ScrollView style={styles.detailContent}>
-        {/* 周记录 */}
-        <WeeklyRecordDetail
-          habit={habit}
-          checkIns={habitCheckIns}
-          onToggleCheckIn={onToggleCheckIn}
-          colors={colors}
-        />
-
         {/* 月日历 */}
         <HabitCalendar
           checkIns={habitCheckIns}
@@ -783,19 +909,43 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
-  detailTitleContainer: {
+  detailHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    zIndex: 1,
+  },
+  detailBackButton: {
+    padding: 12,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  detailTitleContainer: {
+    flex: 1,
+    alignItems: 'center',
+    marginLeft: -60, // Compensate for back button width
+  },
+  detailTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 4,
   },
   detailCategoryTag: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginLeft: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
   },
   detailCategoryText: {
     fontSize: 12,
     fontWeight: '500',
+  },
+  detailHeaderSpace: {
+    width: 40, // Same as back button area
   },
   weeklyRecordContainer: {
     marginHorizontal: 20,
@@ -874,5 +1024,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flex: 1,
     justifyContent: 'space-between',
+  },
+  swipeableContainer: {
+    marginVertical: 8,
+    overflow: 'hidden',
+  },
+  deleteButton: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    width: 80,
+    backgroundColor: '#FF3B30',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderTopRightRadius: 16,
+    borderBottomRightRadius: 16,
+  },
+  deleteButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 4,
   },
 });

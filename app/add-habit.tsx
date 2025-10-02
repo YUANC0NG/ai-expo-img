@@ -16,11 +16,6 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import HabitsService from '@/services/HabitsService';
 
-const HABIT_COLORS = [
-  '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
-  '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9',
-];
-
 const DEFAULT_CATEGORIES = ['健康', '学习', '工作', '生活', '运动', '阅读'];
 
 export default function AddHabitScreen() {
@@ -28,7 +23,6 @@ export default function AddHabitScreen() {
   const router = useRouter();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [selectedColor, setSelectedColor] = useState(HABIT_COLORS[0]);
   const [category, setCategory] = useState('');
   const [customCategory, setCustomCategory] = useState('');
   const [showCustomCategory, setShowCustomCategory] = useState(false);
@@ -64,15 +58,19 @@ export default function AddHabitScreen() {
 
     setSaving(true);
     try {
-      await HabitsService.saveHabit({
+      const newHabit = await HabitsService.saveHabit({
         name: name.trim(),
         description: description.trim(),
-        color: selectedColor,
+        color: '#4ECDC4', // 使用默认颜色
         category: finalCategory,
       });
       
+      console.log('New habit created:', newHabit);
+      
       Alert.alert('成功', '习惯创建成功', [
-        { text: '确定', onPress: () => router.back() }
+        { text: '确定', onPress: () => {
+          router.back();
+        }}
       ]);
     } catch (error) {
       console.error('Error saving habit:', error);
@@ -140,26 +138,28 @@ export default function AddHabitScreen() {
           
           {/* 已有分类 */}
           <View style={styles.categoryGrid}>
-            {[...new Set([...DEFAULT_CATEGORIES, ...existingCategories])].map((cat) => (
-              <TouchableOpacity
-                key={cat}
-                style={[
-                  styles.categoryOption,
-                  { borderColor: colors.border || '#E0E0E0' },
-                  category === cat && [styles.selectedCategory, { backgroundColor: colors.tint }],
-                ]}
-                onPress={() => {
-                  setCategory(cat);
-                  setShowCustomCategory(false);
-                }}
-              >
-                <ThemedText style={[
-                  styles.categoryOptionText,
-                  category === cat && styles.selectedCategoryText,
-                ]}>
-                  {cat}
-                </ThemedText>
-              </TouchableOpacity>
+            {[...new Set([...DEFAULT_CATEGORIES, ...existingCategories.filter(cat => cat && cat.trim())])].map((cat) => (
+              cat && cat.trim() && (
+                <TouchableOpacity
+                  key={cat}
+                  style={[
+                    styles.categoryOption,
+                    { borderColor: colors.border || '#E0E0E0' },
+                    category === cat && [styles.selectedCategory, { backgroundColor: colors.tint }],
+                  ]}
+                  onPress={() => {
+                    setCategory(cat);
+                    setShowCustomCategory(false);
+                  }}
+                >
+                  <ThemedText style={[
+                    styles.categoryOptionText,
+                    category === cat && styles.selectedCategoryText,
+                  ]}>
+                    {cat}
+                  </ThemedText>
+                </TouchableOpacity>
+              )
             ))}
             
             {/* 自定义分类按钮 */}
@@ -202,49 +202,6 @@ export default function AddHabitScreen() {
             />
           )}
         </ThemedView>
-
-        <ThemedView style={styles.section}>
-          <ThemedText style={styles.sectionTitle}>选择颜色</ThemedText>
-          <View style={styles.colorGrid}>
-            {HABIT_COLORS.map((color) => (
-              <TouchableOpacity
-                key={color}
-                style={[
-                  styles.colorOption,
-                  { backgroundColor: color },
-                  selectedColor === color && styles.selectedColor,
-                ]}
-                onPress={() => setSelectedColor(color)}
-              >
-                {selectedColor === color && (
-                  <IconSymbol name="checkmark" size={16} color="white" />
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </ThemedView>
-
-        <ThemedView style={styles.previewSection}>
-          <ThemedText style={styles.sectionTitle}>预览</ThemedText>
-          <View style={[styles.previewCard, { backgroundColor: colors.background }]}>
-            <View style={[styles.previewColorIndicator, { backgroundColor: selectedColor }]} />
-            <View style={styles.previewInfo}>
-              <View style={styles.previewTitleRow}>
-                <ThemedText style={styles.previewName}>
-                  {name || '习惯名称'}
-                </ThemedText>
-                <View style={[styles.previewCategoryTag, { backgroundColor: colors.tint + '20' }]}>
-                  <ThemedText style={[styles.previewCategoryText, { color: colors.tint }]}>
-                    {(showCustomCategory ? customCategory : category) || '分类'}
-                  </ThemedText>
-                </View>
-              </View>
-              <ThemedText style={styles.previewDescription}>
-                {description || '习惯描述'}
-              </ThemedText>
-            </View>
-          </View>
-        </ThemedView>
       </ScrollView>
     </SafeAreaView>
   );
@@ -268,7 +225,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   backButton: {
-    padding: 4,
+    padding: 8,
   },
   saveButton: {
     paddingHorizontal: 8,
@@ -354,53 +311,5 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 5,
-  },
-  previewSection: {
-    marginTop: 24,
-    marginBottom: 40,
-  },
-  previewCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  previewColorIndicator: {
-    width: 4,
-    height: 40,
-    borderRadius: 2,
-    marginRight: 16,
-  },
-  previewInfo: {
-    flex: 1,
-  },
-  previewTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  previewName: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  previewCategoryTag: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-    marginLeft: 8,
-  },
-  previewCategoryText: {
-    fontSize: 10,
-    fontWeight: '500',
-  },
-  previewDescription: {
-    fontSize: 14,
-    opacity: 0.7,
   },
 });
