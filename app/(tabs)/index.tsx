@@ -24,7 +24,7 @@ export default function HabitsScreen() {
   const router = useRouter();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
-    const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('全部');
@@ -74,19 +74,19 @@ export default function HabitsScreen() {
   };
 
   // 筛选习惯
-  const filteredHabits = selectedCategory === '全部' 
-    ? habits 
+  const filteredHabits = selectedCategory === '全部'
+    ? habits
     : habits.filter(habit => habit.category === selectedCategory);
 
-  
+
   // 计算单个习惯的完成率
   const calculateHabitCompletionRate = (habit: Habit) => {
     const today = new Date();
     const habitStart = new Date(habit.createdAt);
     const daysSinceStart = Math.floor((today.getTime() - habitStart.getTime()) / (24 * 60 * 60 * 1000));
-    
+
     if (daysSinceStart === 0) return 0;
-    
+
     const habitCheckIns = checkIns.filter(c => c.habitId === habit.id);
     const completionRate = (habitCheckIns.length / (daysSinceStart + 1)) * 100;
     return Math.round(completionRate);
@@ -96,7 +96,7 @@ export default function HabitsScreen() {
   const handleTodayCheckIn = async (habit: Habit) => {
     try {
       const existingCheckIn = checkIns.find(c => c.habitId === habit.id && c.date === todayString);
-      
+
       if (existingCheckIn) {
         // 取消打卡
         await HabitsService.removeCheckIn(habit.id, todayString);
@@ -112,7 +112,7 @@ export default function HabitsScreen() {
     }
   };
 
-  
+
   // 处理删除习惯
   const handleDeleteHabit = async (habit: Habit) => {
     try {
@@ -127,13 +127,13 @@ export default function HabitsScreen() {
   };
 
   // 可滑动的习惯卡片组件
-  const SwipeableHabitCard = ({ habit, colors, onPress }: { 
-    habit: Habit; 
-    colors: any; 
+  const SwipeableHabitCard = ({ habit, colors, onPress }: {
+    habit: Habit;
+    colors: any;
     onPress: () => void;
   }) => {
     const translateX = useRef(new Animated.Value(0)).current;
-    
+
     const panResponder = useRef(
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
@@ -143,7 +143,7 @@ export default function HabitsScreen() {
         onPanResponderMove: (_, gesture) => {
           if (gesture.dx < 0) { // 只允许向左滑动
             translateX.setValue(gesture.dx);
-            }
+          }
         },
         onPanResponderRelease: (_, gesture) => {
           if (gesture.dx < -80) {
@@ -205,7 +205,7 @@ export default function HabitsScreen() {
           <IconSymbol name="trash" size={20} color="white" />
           <Text style={styles.deleteButtonText}>删除</Text>
         </Animated.View>
-        
+
         <TouchableOpacity
           style={[styles.habitCard, { backgroundColor: colors.card }]}
           onPress={onPress}
@@ -220,7 +220,7 @@ export default function HabitsScreen() {
 
   // 渲染习惯卡片内容
   const renderHabitCardContent = (habit: Habit, colors: any) => {
-    const todayCheckIn = checkIns.find(c => 
+    const todayCheckIn = checkIns.find(c =>
       c.habitId === habit.id && c.date === todayString
     );
     const completionRate = calculateHabitCompletionRate(habit);
@@ -229,11 +229,11 @@ export default function HabitsScreen() {
       <>
         <View style={styles.habitCardLeft}>
           <View style={[styles.progressCircle, { borderColor: habit.color }]}>
-            <IconSymbol 
+            <IconSymbol
               name={
                 completionRate <= 25 ? "circle" :
-                completionRate <= 50 ? "circle.lefthalf.filled" :
-                completionRate <= 75 ? "circle.righthalf.filled" : "checkmark.circle.fill"
+                  completionRate <= 50 ? "circle.lefthalf.filled" :
+                    completionRate <= 75 ? "circle.righthalf.filled" : "checkmark.circle.fill"
               }
               size={24}
               color={habit.color}
@@ -253,7 +253,7 @@ export default function HabitsScreen() {
         </View>
         <View style={styles.habitCardRight}>
           {todayCheckIn ? (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.checkedButton, { backgroundColor: habit.color + '20' }]}
               onPress={(e) => {
                 e.stopPropagation();
@@ -264,7 +264,7 @@ export default function HabitsScreen() {
               <ThemedText style={[styles.checkedText, { color: habit.color }]}>已打卡</ThemedText>
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.checkButton, { backgroundColor: habit.color }]}
               onPress={(e) => {
                 e.stopPropagation();
@@ -280,17 +280,22 @@ export default function HabitsScreen() {
     );
   };
 
-  
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <ThemedView style={styles.header}>
         <ThemedText style={styles.title}></ThemedText>
       </ThemedView>
 
+      <View className="flex-1 items-center justify-center bg-blue-200">
+        <Text className="text-xl font-bold text-blue-500">
+          Welcome to Nativewind!
+        </Text>
+      </View>
       {/* 分类筛选 */}
       {categories.length > 1 && (
-        <ScrollView 
-          horizontal 
+        <ScrollView
+          horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.categoryFilter}
           contentContainerStyle={styles.categoryFilterContent}
@@ -315,10 +320,10 @@ export default function HabitsScreen() {
         </ScrollView>
       )}
 
-      
+
       {/* 今日习惯 */}
       <View style={styles.todayHabitsContainer}>
-        <ScrollView 
+        <ScrollView
           style={styles.habitsList}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -335,19 +340,19 @@ export default function HabitsScreen() {
             </View>
           ) : (
             filteredHabits.map((habit) => (
-            <SwipeableHabitCard
-              key={habit.id}
-              habit={habit}
-              colors={colors}
-              onPress={() => handleHabitPress(habit)}
-            />
-          ))
+              <SwipeableHabitCard
+                key={habit.id}
+                habit={habit}
+                colors={colors}
+                onPress={() => handleHabitPress(habit)}
+              />
+            ))
           )}
         </ScrollView>
       </View>
 
       {/* 悬浮新增按钮 */}
-      <TouchableOpacity 
+      <TouchableOpacity
         style={[styles.floatingAddButton, { backgroundColor: colors.tint }]}
         onPress={() => router.push('/add-habit')}
       >
