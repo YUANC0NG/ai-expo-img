@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
   Animated,
   PanResponder,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { Colors } from '@/constants/Colors';
@@ -64,6 +64,13 @@ export default function HabitsScreen() {
     };
     initializeData();
   }, []);
+
+  // 当页面重新获得焦点时刷新数据
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [])
+  );
 
   // 下拉刷新
   const onRefresh = () => {
@@ -137,17 +144,31 @@ export default function HabitsScreen() {
   // 处理今日打卡（切换打卡状态）
   const handleTodayCheckIn = async (habit: Habit) => {
     try {
+      console.log(`开始打卡操作: habitId=${habit.id}, habitName=${habit.name}, date=${todayString}`);
+
+      // 检查当前习惯的打卡状态
       const existingCheckIn = checkIns.find(c => c.habitId === habit.id && c.date === todayString);
-      
+      console.log(`当前打卡状态: ${existingCheckIn ? '已打卡' : '未打卡'}`);
+
       if (existingCheckIn) {
         // 取消打卡
+        console.log(`取消打卡: ${habit.id}`);
         await HabitsService.removeCheckIn(habit.id, todayString);
         setCheckIns(prev => prev.filter(c => !(c.habitId === habit.id && c.date === todayString)));
       } else {
         // 新增打卡
+        console.log(`新增打卡: ${habit.id}`);
         const newCheckIn = await HabitsService.addCheckIn(habit.id, todayString);
         setCheckIns(prev => [...prev, newCheckIn]);
       }
+
+      // 验证操作结果
+      setTimeout(async () => {
+        const updatedCheckIns = await HabitsService.getCheckIns();
+        const currentHabitCheckIn = updatedCheckIns.find(c => c.habitId === habit.id && c.date === todayString);
+        console.log(`操作结果验证: habitId=${habit.id}, 现在状态=${currentHabitCheckIn ? '已打卡' : '未打卡'}`);
+      }, 100);
+
     } catch (error) {
       console.error('Error toggling check-in:', error);
       Alert.alert('错误', '操作失败，请重试');
@@ -269,10 +290,18 @@ export default function HabitsScreen() {
 
   // 渲染习惯卡片内容
   const renderHabitCardContent = (habit: Habit, colors: any) => {
-    const todayCheckIn = checkIns.find(c => 
+    const todayCheckIn = checkIns.find(c =>
       c.habitId === habit.id && c.date === todayString
     );
     const completionRate = calculateHabitCompletionRate(habit);
+
+    // 调试信息：检查是否有其他习惯被错误地标记
+    const otherHabitsWithSameId = checkIns.filter(c =>
+      c.habitId === habit.id && c.date === todayString
+    );
+    if (otherHabitsWithSameId.length > 1) {
+      console.warn(`发现重复打卡记录: habitId=${habit.id}, 记录数量=${otherHabitsWithSameId.length}`);
+    }
 
     return (
       <>

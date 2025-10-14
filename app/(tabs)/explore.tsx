@@ -3,6 +3,7 @@ import { StyleSheet, View, ScrollView, TouchableOpacity, Text, Alert } from 'rea
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import HabitsService from '@/services/HabitsService';
 
 interface MenuItem {
   id: string;
@@ -64,6 +65,39 @@ export default function ProfileScreen() {
     );
   };
 
+  const handleResetData = () => {
+    Alert.alert(
+      '重置数据',
+      '确定要重置所有习惯数据吗？此操作不可恢复，所有习惯和打卡记录将被删除。',
+      [
+        { text: '取消', style: 'cancel' },
+        { text: '确定重置', onPress: async () => {
+          try {
+            console.log('开始重置数据...');
+            const habitsBefore = await HabitsService.getHabits();
+            const checkInsBefore = await HabitsService.getCheckIns();
+            console.log('重置前 - 习惯数量:', habitsBefore.length, '打卡数量:', checkInsBefore.length);
+
+            await HabitsService.resetAllData();
+
+            const habitsAfter = await HabitsService.getHabits();
+            const checkInsAfter = await HabitsService.getCheckIns();
+            console.log('重置后 - 习惯数量:', habitsAfter.length, '打卡数量:', checkInsAfter.length);
+
+            if (habitsAfter.length === 0 && checkInsAfter.length === 0) {
+              Alert.alert('成功', '所有数据已重置');
+            } else {
+              Alert.alert('部分成功', `习惯已重置，但仍有 ${habitsAfter.length} 个习惯和 ${checkInsAfter.length} 条打卡记录`);
+            }
+          } catch (error) {
+            console.error('重置数据失败:', error);
+            Alert.alert('错误', `重置数据失败: ${error.message || '请重试'}`);
+          }
+        }, style: 'destructive' }
+      ]
+    );
+  };
+
   const menuItems: MenuItem[] = [
     {
       id: 'subscribe',
@@ -104,6 +138,13 @@ export default function ProfileScreen() {
       title: '关于我们',
       icon: 'info.circle.fill',
       action: handleAbout
+    },
+    {
+      id: 'reset',
+      title: '重置数据',
+      subtitle: '清除所有习惯数据',
+      icon: 'trash.fill',
+      action: handleResetData
     }
   ];
 
@@ -134,12 +175,13 @@ export default function ProfileScreen() {
               <View style={styles.menuItemLeft}>
                 <View style={[
                   styles.iconContainer,
-                  item.isPremium && styles.premiumIconContainer
+                  item.isPremium && styles.premiumIconContainer,
+                  item.id === 'reset' && styles.resetIconContainer
                 ]}>
-                  <IconSymbol 
-                    name={item.icon} 
-                    size={20} 
-                    color={item.isPremium ? '#fff' : '#666'} 
+                  <IconSymbol
+                    name={item.icon}
+                    size={20}
+                    color={item.isPremium ? '#fff' : item.id === 'reset' ? '#fff' : '#666'}
                   />
                 </View>
                 <View style={styles.textContainer}>
@@ -231,6 +273,9 @@ const styles = StyleSheet.create({
   },
   premiumIconContainer: {
     backgroundColor: '#FF6B35',
+  },
+  resetIconContainer: {
+    backgroundColor: '#DC3545',
   },
   textContainer: {
     flex: 1,

@@ -116,7 +116,7 @@ class HabitsService {
       }
 
       const newCheckIn: CheckIn = {
-        id: `${habitId}-${date}-${Date.now()}`,
+        id: `${habitId}-${date}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         habitId,
         date,
         createdAt: new Date(),
@@ -242,6 +242,18 @@ class HabitsService {
     return `${year}-${month}-${day}`;
   }
 
+  // 重置所有数据
+  async resetAllData(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(HABITS_STORAGE_KEY);
+      await AsyncStorage.removeItem(CHECKINS_STORAGE_KEY);
+      console.log('All habits data has been reset');
+    } catch (error) {
+      console.error('Error resetting all data:', error);
+      throw error;
+    }
+  }
+
   // 初始化示例数据
   async initializeSampleData(): Promise<void> {
     try {
@@ -269,14 +281,13 @@ class HabitsService {
         ];
 
         // 确保每个习惯有唯一的ID
-        for (let i = 0; i < sampleHabits.length; i++) {
-          const habitWithId = {
-            ...sampleHabits[i],
-            id: `sample-habit-${i}`,
-            createdAt: new Date(),
-          };
-          await AsyncStorage.setItem(HABITS_STORAGE_KEY, JSON.stringify([habitWithId]));
-        }
+        const habitsWithIds = sampleHabits.map((habit, index) => ({
+          ...habit,
+          id: `sample-habit-${index}`,
+          createdAt: new Date(),
+        }));
+
+        await AsyncStorage.setItem(HABITS_STORAGE_KEY, JSON.stringify(habitsWithIds));
       }
     } catch (error) {
       console.error('Error initializing sample data:', error);

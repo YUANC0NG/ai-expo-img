@@ -78,13 +78,8 @@ export default function AddHabitScreen() {
       const savedHabits = await HabitsService.getHabits();
       console.log('All habits after save:', savedHabits);
 
-      Alert.alert('成功', '习惯创建成功', [
-        {
-          text: '确定', onPress: () => {
-            router.back();
-          }
-        }
-      ]);
+      // 直接返回主页，不显示弹窗
+      router.back();
     } catch (error) {
       console.error('Error saving habit:', error);
       Alert.alert('错误', '保存失败，请重试');
