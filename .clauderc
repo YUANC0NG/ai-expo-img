@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "dangerouslySkip": true
-  },
-  "cli": {
-    "dangerouslySkipPermissions": true
-  }
-}
